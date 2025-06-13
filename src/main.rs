@@ -1,14 +1,13 @@
+mod sampler_app;
+
 use std::fs::File;
 use std::io::BufReader;
-use std::iter::Skip;
 use std::time::Duration;
-use rodio::{Decoder, OutputStream, source::Source, Sink, Sample};
-use rodio::cpal::FromSample;
-use rodio::source::{SkipDuration, Speed, TakeDuration};
+use rodio::{Decoder, source::Source, OutputStream, Sink};
 use youtube_dl::YoutubeDl;
 
-struct Song{ path: String }
 
+pub struct Song{ path: String }
 impl Song {
     fn new(&self) -> Decoder<BufReader<File>> { //opens and decodes song
         let file = File::open(&self.path).expect("Couldn't open file");
@@ -26,24 +25,17 @@ impl Song {
 
 
 fn main() {
-    // let video_title = download_file("https://www.youtube.com/watch?v=nLpTpr7_Ye8");
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-    let sink = Sink::try_new(&stream_handle).expect("Couldn't make sink");
-    //Sink is like the audio player
+
+
+    
     
     //file path relative to Cargo.toml
+    // let video_title = download_file("https://www.youtube.com/watch?v=nLpTpr7_Ye8");
     // let file = File::open(format!("music/{}.mp3", video_title)).expect("Couldn't open file");
-    let dtmlive: Song = Song{ //base song, can make modifications via clips
-        path: String::from("music/dtmlive.mp3"),
-    };
 
-    let clip1 = dtmlive.clip(1.5, 6.0, 12.0, false);
-    let clip2 = dtmlive.clip(0.80, 30.0, 33.0, false);
-    
-    sink.append(clip1);
-    sink.append(clip2);
-    
-    sink.sleep_until_end();
+
+    sampler_app::init_app(stream_handle).expect("Unable to open app");
     println!("Hello, world!");
 }
 
