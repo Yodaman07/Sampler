@@ -23,12 +23,8 @@ impl Song {
     }
 }
 
-
 fn main() {
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-
-
-    
     
     //file path relative to Cargo.toml
     // let video_title = download_file("https://www.youtube.com/watch?v=nLpTpr7_Ye8");
