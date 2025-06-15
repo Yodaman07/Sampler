@@ -32,7 +32,7 @@ fn main() {
 
 
     sampler_app::init_app(stream_handle).expect("Unable to open app");
-    println!("Hello, world!");
+
 }
 
 
