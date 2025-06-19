@@ -27,7 +27,7 @@ fn main() {
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     
     //file path relative to Cargo.toml
-    // let video_title = download_file("https://www.youtube.com/watch?v=nLpTpr7_Ye8");
+    // let video_title = download_file("https://youtu.be/YWXvj_fb1Ec?si=Y8jAqiHDAb3z3J9f");
     // let file = File::open(format!("music/{}.mp3", video_title)).expect("Couldn't open file");
 
 
