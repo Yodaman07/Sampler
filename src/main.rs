@@ -3,8 +3,7 @@ mod sampler_app;
 use std::fs::File;
 use std::io::BufReader;
 use std::time::Duration;
-use rodio::{Decoder, source::Source, OutputStream, Sink};
-use youtube_dl::YoutubeDl;
+use rodio::{Decoder, source::Source, OutputStream};
 
 
 pub struct Song{ path: String }
@@ -33,29 +32,4 @@ fn main() {
 
     sampler_app::init_app(stream_handle).expect("Unable to open app");
 
-}
-
-
-// #[tokio::main]
-fn download_file(video_link: &str) -> String {
-    //grab metadata first then download file
-    let metadata = YoutubeDl::new(video_link)
-        .socket_timeout("15")
-        .run()
-        .expect("An error occurred when grabbing metadata");
-
-
-    let title = metadata.into_single_video().unwrap().title.expect("Error getting video title");
-
-    let output = YoutubeDl::new(video_link)
-        .socket_timeout("15")
-        .output_template(format!("{}.%(ext)s", title))
-        .extract_audio(true)
-        .extra_arg("--audio-format")
-        .extra_arg("mp3")
-        .download_to("music")
-        .unwrap();
-
-    println!("Downloaded {}", title);
-    title
 }
