@@ -1,6 +1,6 @@
 use egui::Ui;
 use youtube_dl::{YoutubeDl, YoutubeDlOutput};
-use crate::AudioPlayer::AudioPlayer;
+use crate::audio_player::AudioPlayer;
 
 #[derive(PartialEq)]
 enum Tabs{ LOCAL, YTDl}

@@ -1,6 +1,6 @@
 mod sampler_app;
-mod AudioPlayer;
-mod FileLoader;
+mod audio_player;
+mod file_loader;
 
 use std::fs::File;
 use std::io::BufReader;
@@ -22,6 +22,10 @@ impl Song {
             .skip_duration(Duration::from_secs_f32(start_time))
             .take_duration(Duration::from_secs_f32(end_time - start_time))
     }
+
+    fn original_duration(&self) -> Duration{ //returns the original song length (before clipping)
+        self.new().total_duration().expect("Error decoding duration")
+    }
 }
 
 fn main() {
@@ -33,5 +37,4 @@ fn main() {
 
 
     sampler_app::init_app(stream_handle).expect("Unable to open app");
-
 }

@@ -1,6 +1,6 @@
 use rodio::{OutputStreamHandle};
-use crate::AudioPlayer::{AudioPlayer, AudioPlayerState};
-use crate::FileLoader::FileLoader;
+use crate::audio_player::{AudioPlayer, AudioPlayerState};
+use crate::file_loader::FileLoader;
 
 struct SamplerApp{
     file_loader: FileLoader,
@@ -36,7 +36,6 @@ impl eframe::App for SamplerApp {
             self.audio_player.construct(ui); // ai help, but it is a compact way to display the audio player
             ui.add_space(10.0);
             self.file_loader.construct(&mut self.audio_player, ui);
-
         });
     }
 }
