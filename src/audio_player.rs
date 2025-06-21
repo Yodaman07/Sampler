@@ -1,3 +1,4 @@
+use std::time::Duration;
 use eframe::emath::Vec2;
 use eframe::epaint::Color32;
 use egui::{include_image, Image, Pos2, Ui};
@@ -50,19 +51,21 @@ impl AudioPlayer{
 
     fn skip_to(&mut self, time: f32){
 
-        if let Some(path) = &self.path { //will only happen if sink exists
-            let sink = &self.sink.as_ref().unwrap();
-            sink.clear();
-
-            let s: Song = Song { path: String::from(path) }; //base song can make modifications via clips
-
-            self.playback_time = s.original_duration().as_secs_f32(); //not good at downloading really short videos
-            let clip1 = s.clip(1.0, time, self.playback_time, false); //trimmed portion
-            sink.append(clip1);
-            sink.play();
-
-            self.current_time = time;
-        }
+        let res = self.sink.as_ref().unwrap().try_seek(Duration::from_secs_f32(time));
+        res.expect("Error Skipping content");
+        // if let Some(path) = &self.path { //will only happen if sink exists
+        //     let sink = &self.sink.as_ref().unwrap();
+        //     sink.clear();
+        //
+        //     let s: Song = Song { path: String::from(path) }; //base song can make modifications via clips
+        //
+        //     self.playback_time = s.original_duration().as_secs_f32(); //not good at downloading really short videos
+        //     let clip1 = s.clip(1.0, time, self.playback_time, false); //trimmed portion
+        //     sink.append(clip1);
+        //     sink.play();
+        //
+        self.current_time = time;
+        // }
     }
 
 
