@@ -9,41 +9,41 @@ struct SamplerApp{
     file_loader: FileLoader,
     audio_player: AudioPlayer
 }
-
+#[derive(PartialEq)]
+enum Tabs{ LOCAL, YTDl}
 struct FileLoader{
     path: Option<String>, //representing if a song file has been loaded or not yet
-    yt_url: Option<String> //option is none is using local file, and is some if downloading from yt
+    yt_url: String,
+    tab: Tabs //loading a file from yt or locally?
 }
 impl FileLoader{
     fn download_file(&self) -> Option<String> { //if couldn't dl, will return none
+        println!("Downloading video at {}", self.yt_url);
+        //grab metadata first then download file
+        let metadata : Result<YoutubeDlOutput, youtube_dl::Error> = YoutubeDl::new(&self.yt_url)
+            .socket_timeout("15")
+            .run();
 
-        if let Some(link) = &self.yt_url {
-            //grab metadata first then download file
-            let metadata : Result<YoutubeDlOutput, youtube_dl::Error> = YoutubeDl::new(link)
-                .socket_timeout("15")
-                .run();
+        if let Err(e) = metadata{
+            println!("{}", e);
+            println!("An error occurred when grabbing metadata. The video link may be invalid. Please try again");
+            return None;
+        }
 
-            if let Err(e) = metadata{
-                println!("{}", e);
-                println!("An error occurred when grabbing metadata. The video link may be invalid. Please try again");
-                return None;
-            }
+        let metadata = metadata.unwrap();
+        let title = metadata.into_single_video().unwrap().title.expect("Error getting video title");
 
-            let metadata = metadata.unwrap();
-            let title = metadata.into_single_video().unwrap().title.expect("Error getting video title");
+        let output = YoutubeDl::new(&self.yt_url)
+            .socket_timeout("15") // after 15s, a failed download will be reported
+            .output_template(format!("{}.%(ext)s", title))
+            .extract_audio(true)
+            .extra_arg("--audio-format")
+            .extra_arg("mp3")
+            .download_to("music")
+            .unwrap();
 
-            let output = YoutubeDl::new(link)
-                .socket_timeout("15") // after 15s, a failed download will be reported
-                .output_template(format!("{}.%(ext)s", title))
-                .extract_audio(true)
-                .extra_arg("--audio-format")
-                .extra_arg("mp3")
-                .download_to("music")
-                .unwrap();
-
-            println!("Downloaded {}", title);
-            Some(title)
-        }else{ None }
+        println!("Downloaded {}", title);
+        Some(title)
     }
 }
 
@@ -163,24 +163,38 @@ impl eframe::App for SamplerApp {
             self.audio_player.construct(ui); // ai help, but it is a compact way to display the audio player
 
             ui.add_space(10.0);
-            match &mut self.file_loader.yt_url {
-                None => {
-                    //Code for file dialog
-                }
-                Some(txt) => {
-                    ui.text_edit_singleline(txt);
+            ui.horizontal(|ui| {
+                ui.selectable_value(&mut self.file_loader.tab, Tabs::YTDl, "Ytdl");
+                ui.selectable_value(&mut self.file_loader.tab, Tabs::LOCAL, "Local");
+            });
+
+            match self.file_loader.tab {
+                Tabs::YTDl => {
+                    ui.text_edit_singleline(&mut self.file_loader.yt_url);
                     if ui.button("Download Video").clicked(){
-                        println!("{}", txt); //Video url
                         let title: Option<String> = self.file_loader.download_file();
                         if let Some(t) = title{
                             let path = format!("music/{}.mp3", t);
-                            println!("{}", path);
                             self.audio_player.path = Some(path);
                         }
 
                     }
                 }
+                Tabs::LOCAL => {
+                    if ui.button("Open file…").clicked() { //https://github.com/emilk/egui/blob/main/examples/file_dialog/src/main.rs
+                        if let Some(path) = rfd::FileDialog::new()
+                            .add_filter("text", &["mp3"])
+                            .pick_file() {
+
+                            self.audio_player.path = Some(path.display().to_string());
+                            println!("selected {} from file dialog", path.display());
+                        }
+                    }
+
+                }
             }
+
+            ui.label(format!("Currently loaded video: {:?}", self.audio_player.path));
 
         });
     }
@@ -191,7 +205,8 @@ impl SamplerApp{
         Self{
             file_loader: FileLoader{
                 path: None,
-                yt_url: Some(String::from("")), //Some value
+                yt_url: String::from(""),
+                tab: Tabs::YTDl
             },
             audio_player: AudioPlayer{
                 path: None, //This is the default path of the music player. By default it won't play because its waiting to load a file
