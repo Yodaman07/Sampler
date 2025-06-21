@@ -1,4 +1,6 @@
 mod sampler_app;
+mod AudioPlayer;
+mod FileLoader;
 
 use std::fs::File;
 use std::io::BufReader;
