@@ -7,7 +7,7 @@ use std::io::BufReader;
 use std::time::Duration;
 use rodio::{Decoder, source::Source, OutputStream};
 
-
+//BUG YOU CAN CLICK OUT OF BOUNDS ON THE PLAYING SONG
 pub struct Song{ path: String }
 impl Song {
     fn new(&self) -> Decoder<BufReader<File>> { //opens and decodes song

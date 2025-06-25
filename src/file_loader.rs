@@ -59,6 +59,7 @@ impl FileLoader{
                     if let Some(t) = title{
                         let path = format!("music/{}.mp3", t);
                         audio_player.path = Some(path);
+                        audio_player.startup();
                     }
 
                 }
@@ -70,6 +71,7 @@ impl FileLoader{
                         .pick_file() {
 
                         audio_player.path = Some(path.display().to_string());
+                        audio_player.startup();
                         println!("selected {} from file dialog", path.display());
                     }
                 }

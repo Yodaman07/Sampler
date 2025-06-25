@@ -30,7 +30,7 @@ impl AudioPlayer{
             audio_player_state: AudioPlayerState::PAUSED,
         }
     } //creates a new default audio player
-    fn startup(&mut self){ //load sink and song when you play the song for the first time
+    pub fn startup(&mut self){ //load sink and song when you load it via fileloader (yt or local)
         if let Some(path) = &self.path{
             let sink = Sink::try_new(&self.stream_handle).expect("Couldn't make sink");
             let s: Song = Song{ path: String::from(path)}; //base song can make modifications via clips
@@ -40,32 +40,22 @@ impl AudioPlayer{
 
             //Sink is like the audio player
             sink.append(clip1);
-            self.audio_player_state = AudioPlayerState::PLAYING;
+            sink.pause();
 
             self.sink = Some(sink);
         }else{
             println!("No file has been loaded. Please download from youtube, or load a local song")
         }
-
     }
 
     fn skip_to(&mut self, time: f32){
-
-        let res = self.sink.as_ref().unwrap().try_seek(Duration::from_secs_f32(time));
-        res.expect("Error Skipping content");
-        // if let Some(path) = &self.path { //will only happen if sink exists
-        //     let sink = &self.sink.as_ref().unwrap();
-        //     sink.clear();
-        //
-        //     let s: Song = Song { path: String::from(path) }; //base song can make modifications via clips
-        //
-        //     self.playback_time = s.original_duration().as_secs_f32(); //not good at downloading really short videos
-        //     let clip1 = s.clip(1.0, time, self.playback_time, false); //trimmed portion
-        //     sink.append(clip1);
-        //     sink.play();
-        //
+        // let res = self.sink.as_ref().unwrap().try_seek(Duration::from_secs_f32(time));
+        if let Some(s) = self.sink.as_ref(){
+            s.try_seek(Duration::from_secs_f32(time)).expect("Error skipping content");
+        }else{
+            println!("Unable to skip content. Try loading audio first");
+        }
         self.current_time = time;
-        // }
     }
 
 
@@ -98,9 +88,6 @@ impl AudioPlayer{
             println!("{}", accurate_x);
 
             self.skip_to(self.get_time_from_pos(accurate_x));
-
-
-            // println!("CLICK @ {}, {}", pos.x, pos.y);
         }
 
         ui.painter().rect_filled(rect, 25, Color32::DARK_GRAY);
@@ -108,7 +95,17 @@ impl AudioPlayer{
 
         if let Some(s) = &self.sink {
             self.current_time = s.get_pos().as_secs_f32();
+
+            if self.current_time >= self.playback_time{
+                println!("End of song");
+                s.pause();
+                self.audio_player_state = AudioPlayerState::PAUSED; //will auto pause the song at the end
+            }
+
         }
+
+
+
 
         //yellow pointer
         let pos = self.get_pos_from_time();
@@ -137,7 +134,7 @@ impl AudioPlayer{
             }
         });
 
-        if ui.button("TrackTime").clicked(){
+        if ui.button("TrackTime").clicked(){ //UNSAFE
             let time = self.sink.as_ref().unwrap().get_pos();
             println!("Current Time {:?}", time); //This is the time since the clip started. Need to account for starting delay and any speed changes
         }
