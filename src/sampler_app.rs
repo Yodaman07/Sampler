@@ -1,3 +1,5 @@
+use egui::{Color32, CornerRadius, Id};
+use egui::panel::Side;
 use rodio::{OutputStreamHandle};
 use crate::audio_player::{AudioPlayer, AudioPlayerState};
 use crate::file_loader::FileLoader;
@@ -30,13 +32,19 @@ impl eframe::App for SamplerApp {
             ctx.request_repaint(); // This forces egui to update continuously
         }
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            //App content goes here
 
-            self.audio_player.construct(ui); // ai help, but it is a compact way to display the audio player
-            ui.add_space(10.0);
-            self.file_loader.construct(&mut self.audio_player, ui);
+        egui::CentralPanel::default()
+            .frame(egui::Frame::central_panel(&ctx.style())
+                .fill(Color32::from_rgb(27, 27, 27)))//ai help
+
+            .show(ctx, |ui| {
+                //App content goes here
+
+                // self.audio_player.construct(ui); // ai help, but it is a compact way to display the audio player
+                ui.add_space(10.0);
+                self.file_loader.construct(&mut self.audio_player, ui);
         });
+
     }
 }
 

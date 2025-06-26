@@ -1,4 +1,6 @@
-use egui::Ui;
+use std::fmt::{Debug, Formatter, Pointer};
+use egui::{Align2, Color32, FontFamily, FontId, Pos2, Rect, Shape, Ui};
+use egui::WidgetType::TextEdit;
 use youtube_dl::{YoutubeDl, YoutubeDlOutput};
 use crate::audio_player::AudioPlayer;
 
@@ -46,6 +48,13 @@ impl FileLoader{
         Some(title)
     }
     pub fn construct(&mut self, audio_player: &mut AudioPlayer, ui: &mut Ui){
+
+        let p_x = 8.0; //panel x and panel y
+        let p_y = 109.0;
+        let panel = Rect::from_two_pos(Pos2::new(p_x, p_y), Pos2::new(p_x+194.0, p_y+173.0));
+        ui.painter().rect_filled(panel, 18, Color32::from_rgb(71,71,71));
+
+        ui.add_space(109.0);
         ui.horizontal(|ui| {
             ui.selectable_value(&mut self.tab, Tabs::YTDl, "Ytdl");
             ui.selectable_value(&mut self.tab, Tabs::LOCAL, "Local");
@@ -53,7 +62,7 @@ impl FileLoader{
 
         match self.tab {
             Tabs::YTDl => {
-                ui.text_edit_singleline(&mut self.yt_url);
+                ui.add_sized(egui::vec2(173.0, 10.0), egui::TextEdit::singleline(&mut self.yt_url));
                 if ui.button("Download Video").clicked(){
                     let title: Option<String> = self.download_file();
                     if let Some(t) = title{
@@ -79,6 +88,7 @@ impl FileLoader{
             }
         }
 
-        ui.label(format!("Currently loaded video: {:?}", audio_player.path));
+        let font = FontId::new(10.0, FontFamily::default());
+        ui.painter().text(Pos2::new((p_x+194.0)/2.0, p_y+173.0-10.0), Align2::CENTER_CENTER, format!("Currently Loaded Track: {:?}", audio_player.path),font, Color32::WHITE);
     }
 }
