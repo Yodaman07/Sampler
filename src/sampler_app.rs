@@ -49,6 +49,7 @@ impl eframe::App for SamplerApp {
         egui::CentralPanel::default()
             .show(ctx, |ui| {
                 //App content goes here
+                
                 self.audio_player.construct(ui); // ai help, but it is a compact way to display the audio player
                 ui.add_space(10.0);
                 self.file_loader.construct(&mut self.audio_player, ui);

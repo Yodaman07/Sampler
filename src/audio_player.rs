@@ -1,7 +1,10 @@
 use std::time::Duration;
+use audio_visualizer::Channels;
+use audio_visualizer::waveform::png_file::waveform_static_png_visualize;
 use eframe::emath::Vec2;
 use eframe::epaint::Color32;
-use egui::{include_image, Image, Pos2, Ui};
+use egui::{include_image, Image, ImageSource, Pos2, Ui};
+use egui::Shape::Vec;
 use rodio::{OutputStreamHandle, Sink};
 use crate::Song;
 
@@ -30,10 +33,19 @@ impl AudioPlayer{
             audio_player_state: AudioPlayerState::PAUSED,
         }
     } //creates a new default audio player
-    pub fn startup(&mut self){ //load sink and song when you load it via fileloader (yt or local)
+    pub fn startup(&mut self){ //load sink and song when you load it via fileloader (yt or local), also generate the waveform image
         if let Some(path) = &self.path{
             let sink = Sink::try_new(&self.stream_handle).expect("Couldn't make sink");
             let s: Song = Song{ path: String::from(path)}; //base song can make modifications via clips
+
+            // //have to generate
+            // waveform_static_png_visualize(
+            //     &s.get_samples(),
+            //     Channels::Mono,
+            //     "waveforms/",
+            //     format!("{}.png", s.get_name()).as_str(),
+            // );
+
 
             self.playback_time = s.original_duration().as_secs_f32(); //not good at downloading really short videos
             let clip1 = s.clip(1.0, 0.0, self.playback_time, false); //full song
@@ -47,18 +59,13 @@ impl AudioPlayer{
             println!("No file has been loaded. Please download from youtube, or load a local song")
         }
     }
-
     fn skip_to(&mut self, time: f32){
         // let res = self.sink.as_ref().unwrap().try_seek(Duration::from_secs_f32(time));
         if let Some(s) = self.sink.as_ref(){
             s.try_seek(Duration::from_secs_f32(time)).expect("Error skipping content");
-        }else{
-            println!("Unable to skip content. Try loading audio first");
-        }
+        }else{ println!("Unable to skip content. Try loading audio first"); }
         self.current_time = time;
     }
-
-
     fn get_player_icon(&self) -> Image{
         match self.audio_player_state{
             AudioPlayerState::PAUSED => { Image::from(include_image!("../imgs/play.svg")) } //optimize with lifetimes later
@@ -91,6 +98,7 @@ impl AudioPlayer{
         }
 
         ui.painter().rect_filled(rect, 25, Color32::DARK_GRAY);
+        ui.put(rect,  egui::Image::from(include_image!("../waveforms/aaa.png")).corner_radius(25).fit_to_original_size(0.4));
 
 
         if let Some(s) = &self.sink {
@@ -103,9 +111,6 @@ impl AudioPlayer{
             }
 
         }
-
-
-
 
         //yellow pointer
         let pos = self.get_pos_from_time();
