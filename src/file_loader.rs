@@ -1,8 +1,12 @@
 use std::fmt::{Debug, Formatter, Pointer};
-use egui::{Align2, Color32, FontFamily, FontId, Pos2, Rect, Shape, Ui};
+use eframe::emath::Align;
+use egui::{Align2, Color32, FontFamily, FontId, Pos2, Rect, Shape, Ui, Vec2};
+use egui::Shape::Vec;
+use egui::WidgetText::RichText;
 use egui::WidgetType::TextEdit;
 use youtube_dl::{YoutubeDl, YoutubeDlOutput};
 use crate::audio_player::AudioPlayer;
+use crate::sampler_app::SamplerApp;
 
 #[derive(PartialEq)]
 enum Tabs{ LOCAL, YTDl}
@@ -51,19 +55,42 @@ impl FileLoader{
 
         let p_x = 8.0; //panel x and panel y
         let p_y = 109.0;
-        let panel = Rect::from_two_pos(Pos2::new(p_x, p_y), Pos2::new(p_x+194.0, p_y+173.0));
+        let panel = Rect::from_two_pos(Pos2::new(p_x, p_y), Pos2::new(p_x+194.0, p_y+173.0)); //194 is width, and 173 is height
         ui.painter().rect_filled(panel, 18, Color32::from_rgb(71,71,71));
 
         ui.add_space(109.0);
-        ui.horizontal(|ui| {
-            ui.selectable_value(&mut self.tab, Tabs::YTDl, "Ytdl");
-            ui.selectable_value(&mut self.tab, Tabs::LOCAL, "Local");
-        });
+
+        //make the selectable laels we will add later
+        let ytdl_label = egui::SelectableLabel::new(
+            self.tab == Tabs::YTDl,
+            egui::RichText::new("YTDL").color(Color32::WHITE)
+        );
+        let local_label =  egui::SelectableLabel::new(
+            self.tab == Tabs::LOCAL,
+            egui::RichText::new("Local").color(Color32::WHITE)
+        );
+
+
+        SamplerApp::add_rel_to_rect(ui, panel, ytdl_label, Vec2::new(10.0, 10.0), Vec2::new(80.0, 15.0))
+            .clicked().then(|| self.tab = Tabs::YTDl);
+
+        SamplerApp::add_rel_to_rect(ui, panel, local_label, Vec2::new(100.0, 10.0), Vec2::new(80.0, 15.0))
+            .clicked().then(|| self.tab = Tabs::LOCAL);
+
+
 
         match self.tab {
             Tabs::YTDl => {
-                ui.add_sized(egui::vec2(173.0, 10.0), egui::TextEdit::singleline(&mut self.yt_url));
-                if ui.button("Download Video").clicked(){
+                let edit =egui::TextEdit::singleline(&mut self.yt_url)
+                    .desired_width(157.0)
+                    .text_color(egui::Color32::BLACK);
+
+                SamplerApp::add_rel_to_rect(ui, panel, edit, Vec2::new(18.5, 40.0), Vec2::new(157.0, 20.0));
+                let download_btn = SamplerApp::add_rel_to_rect(ui, panel, egui::Button::new("Download Video"), Vec2::new(57.0, 80.0),  Vec2::new(80.0, 20.0));
+                //btn is 63 x 30
+
+
+                if download_btn.clicked(){
                     let title: Option<String> = self.download_file();
                     if let Some(t) = title{
                         let path = format!("music/{}.mp3", t);
@@ -74,7 +101,8 @@ impl FileLoader{
                 }
             }
             Tabs::LOCAL => {
-                if ui.button("Open file…").clicked() { //https://github.com/emilk/egui/blob/main/examples/file_dialog/src/main.rs
+                let open_file_btn = SamplerApp::add_rel_to_rect(ui, panel, egui::Button::new("Open File"), Vec2::new(57.0, 40.0), Vec2::new(80.0, 20.0));
+                if open_file_btn.clicked() { //https://github.com/emilk/egui/blob/main/examples/file_dialog/src/main.rs
                     if let Some(path) = rfd::FileDialog::new()
                         .add_filter("text", &["mp3"])
                         .pick_file() {
@@ -89,6 +117,8 @@ impl FileLoader{
         }
 
         let font = FontId::new(10.0, FontFamily::default());
-        ui.painter().text(Pos2::new((p_x+194.0)/2.0, p_y+173.0-10.0), Align2::CENTER_CENTER, format!("Currently Loaded Track: {:?}", audio_player.path),font, Color32::WHITE);
+
+        //10 pixel paddinga
+        ui.painter().text(panel.center_bottom()+Vec2::new(0.0, -10.0), Align2::CENTER_BOTTOM, format!("Currently Loaded Track: {:?}", audio_player.path),font, Color32::WHITE);
     }
 }
