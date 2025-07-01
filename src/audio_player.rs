@@ -1,12 +1,17 @@
-use std::time::Duration;
-use audio_visualizer::Channels;
+use std::borrow::Cow;
+use std::fmt::format;
+use std::fs::File;
+use std::io::Read;
+use crate::Song;
+use std::path::{Path, PathBuf};
 use audio_visualizer::waveform::png_file::waveform_static_png_visualize;
+use audio_visualizer::Channels;
+
 use eframe::emath::Vec2;
 use eframe::epaint::Color32;
-use egui::{include_image, Image, ImageSource, Pos2, Ui};
-use egui::Shape::Vec;
+use egui::{include_image, Image, ImageSource, Ui};
 use rodio::{OutputStreamHandle, Sink};
-use crate::Song;
+use std::time::Duration;
 
 pub struct AudioPlayer{ //audio player includes the waveform, the pause/play btn, and the time indicator
     pub path: Option<String>,
@@ -14,7 +19,7 @@ pub struct AudioPlayer{ //audio player includes the waveform, the pause/play btn
     playback_time: f32, //total time
     stream_handle: OutputStreamHandle,
     sink: Option<Sink>,
-    pub audio_player_state: AudioPlayerState
+    pub audio_player_state: AudioPlayerState,
 }
 
 pub enum AudioPlayerState{
@@ -38,13 +43,19 @@ impl AudioPlayer{
             let sink = Sink::try_new(&self.stream_handle).expect("Couldn't make sink");
             let s: Song = Song{ path: String::from(path)}; //base song can make modifications via clips
 
-            // //have to generate
-            // waveform_static_png_visualize(
-            //     &s.get_samples(),
-            //     Channels::Mono,
-            //     "waveforms/",
-            //     format!("{}.png", s.get_name()).as_str(),
-            // );
+            let f_name = format!("{}.png", s.get_name());
+            let mut p: PathBuf = PathBuf::from("waveforms/");
+            p.push(&f_name);
+            if !Path::new(&p).exists(){
+                //Generate png if it doesn't exist already
+                println!("Waveform not found, making one now. Saving as {:?}", p);
+                waveform_static_png_visualize(
+                    &s.get_samples(),
+                    Channels::Mono,
+                    "waveforms/",
+                    &f_name,
+                );
+            }else{ println!("Path exists at {:?}", p); }
 
 
             self.playback_time = s.original_duration().as_secs_f32(); //not good at downloading really short videos
@@ -55,9 +66,7 @@ impl AudioPlayer{
             sink.pause();
 
             self.sink = Some(sink);
-        }else{
-            println!("No file has been loaded. Please download from youtube, or load a local song")
-        }
+        }else{ println!("No file has been loaded. Please download from youtube, or load a local song") }
     }
     fn skip_to(&mut self, time: f32){
         // let res = self.sink.as_ref().unwrap().try_seek(Duration::from_secs_f32(time));
@@ -98,7 +107,30 @@ impl AudioPlayer{
         }
 
         ui.painter().rect_filled(rect, 25, Color32::DARK_GRAY);
-        ui.put(rect,  egui::Image::from(include_image!("../waveforms/aaa.png")).corner_radius(25).fit_to_original_size(0.4));
+
+
+        if let Some(path) = &self.path{
+            //self.path is the song path, and the song name is the same as the image name, so we can extract it using the regex from earlier
+            let name = Song{ path: String::from(path) }.get_name();
+            let path = format!("waveforms/{}.png", name);
+            println!("Loading image from {}", path);
+
+            let mut buffer = vec![];
+            File::open(path)
+                .unwrap()
+                .read_to_end(&mut buffer)
+                .unwrap();
+
+            let image = Image::from_bytes("image_id", buffer)
+                .corner_radius(25)
+                .max_width(650.0)
+                .fit_to_original_size(1.0);
+
+            ui.put(rect, image);
+
+        }
+
+
 
 
         if let Some(s) = &self.sink {

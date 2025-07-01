@@ -2,19 +2,14 @@ mod sampler_app;
 mod audio_player;
 mod file_loader;
 
+use regex::Regex;
+use rodio::{source::Source, Decoder, OutputStream};
 use std::fs::File;
 use std::io::BufReader;
-use std::path::{Path, PathBuf};
 use std::time::Duration;
-use audio_visualizer::{ChannelInterleavement, Channels};
+use audio_visualizer::Channels;
 use audio_visualizer::waveform::png_file::waveform_static_png_visualize;
 use egui::debug_text::print;
-use regex::Regex;
-use rodio::{Decoder, source::Source, OutputStream};
-use symphonia::core::audio::{AudioBuffer, Signal};
-use symphonia::core::io::MediaSourceStream;
-use symphonia::core::probe::Hint;
-use symphonia::default::{get_codecs, get_probe};
 
 //BUG YOU CAN CLICK OUT OF BOUNDS ON THE PLAYING SONG
 pub struct Song{ path: String }
@@ -42,13 +37,12 @@ impl Song {
     }
 
     fn get_name(&self) -> String{
-        let re = Regex::new("/((.*).mp3)").unwrap();
+        let re = Regex::new("([^/]+)(.mp3)").unwrap(); //regex should be good on all file names, as long as they have no / character
         let Some(captured) = re.captures(&self.path) else {
             println!("Unable to find name");
             return String::from("");
         };
-
-        captured[2].to_string()
+        captured[1].to_string() //group 1
     }
 
 }
@@ -60,10 +54,6 @@ fn main() {
     // let video_title = download_file("https://youtu.be/YWXvj_fb1Ec?si=Y8jAqiHDAb3z3J9f");
     // let file = File::open(format!("music/{}.mp3", video_title)).expect("Couldn't open file");
 
-    let mut path = PathBuf::new();
-    path.push("music/closetoyou.mp3");
-
-    // let s = Song{path: "music/closetoyou.mp3".to_string()};
 
     sampler_app::init_app(stream_handle).expect("Unable to open app");
 }

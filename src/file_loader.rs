@@ -1,12 +1,8 @@
-use std::fmt::{Debug, Formatter, Pointer};
-use eframe::emath::Align;
-use egui::{Align2, Color32, FontFamily, FontId, Pos2, Rect, Shape, Ui, Vec2};
-use egui::Shape::Vec;
-use egui::WidgetText::RichText;
-use egui::WidgetType::TextEdit;
-use youtube_dl::{YoutubeDl, YoutubeDlOutput};
 use crate::audio_player::AudioPlayer;
 use crate::sampler_app::SamplerApp;
+use egui::{Align2, Color32, FontFamily, FontId, Pos2, Rect, Ui, Vec2};
+use std::fmt::{Debug, Pointer};
+use youtube_dl::{YoutubeDl, YoutubeDlOutput};
 
 #[derive(PartialEq)]
 enum Tabs{ LOCAL, YTDl}

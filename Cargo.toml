@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-audio-visualizer = "0.5.0"
+audio-visualizer = {path = "audio-visualizer"}
 eframe = "0.31.1"
 egui = "0.31.1"
 egui_extras = { version = "*", features = ["all_loaders"] }
@@ -15,3 +15,5 @@ rodio = "0.20.1"
 symphonia = "0.5.4"
 tokio = { version = "1.0.0", features = ["rt", "rt-multi-thread", "macros"] }
 youtube_dl = "0.10.0"
+log = "0.4.27"
+image = "0.25.6"

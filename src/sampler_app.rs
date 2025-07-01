@@ -1,10 +1,8 @@
-use eframe::emath::Vec2;
-use egui::{Color32, CornerRadius, Id, Rect, Response, Theme, Ui, Visuals, Widget};
-use egui::FontSelection::Style;
-use egui::panel::Side;
-use rodio::{OutputStreamHandle};
 use crate::audio_player::{AudioPlayer, AudioPlayerState};
 use crate::file_loader::FileLoader;
+use eframe::emath::Vec2;
+use egui::{Color32, Rect, Response, Theme, Ui, Widget};
+use rodio::OutputStreamHandle;
 
 pub struct SamplerApp{
     file_loader: FileLoader,
@@ -20,14 +18,11 @@ pub fn init_app(stream_handle: OutputStreamHandle) -> eframe::Result{
     eframe::run_native(
         "Sampler",
         options,
-
         Box::new(|cc| {
-
             egui_extras::install_image_loaders(&cc.egui_ctx);
 
 
             cc.egui_ctx.set_theme(Theme::Dark); //Keeps app in dark mode
-
             Ok(Box::new(SamplerApp::new(stream_handle)))
         } ),
     )
