@@ -7,9 +7,6 @@ use rodio::{source::Source, Decoder, OutputStream};
 use std::fs::File;
 use std::io::BufReader;
 use std::time::Duration;
-use audio_visualizer::Channels;
-use audio_visualizer::waveform::png_file::waveform_static_png_visualize;
-use egui::debug_text::print;
 
 //BUG YOU CAN CLICK OUT OF BOUNDS ON THE PLAYING SONG
 pub struct Song{ path: String }

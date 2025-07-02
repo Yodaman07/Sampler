@@ -1,17 +1,19 @@
-use std::borrow::Cow;
-use std::fmt::format;
-use std::fs::File;
-use std::io::Read;
 use crate::Song;
-use std::path::{Path, PathBuf};
 use audio_visualizer::waveform::png_file::waveform_static_png_visualize;
 use audio_visualizer::Channels;
-
 use eframe::emath::Vec2;
 use eframe::epaint::Color32;
-use egui::{include_image, Image, ImageSource, Ui};
+use egui::{include_image, Image, Ui};
 use rodio::{OutputStreamHandle, Sink};
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
+
+//threads
+use tokio::runtime;
+use std::sync::{Arc, Mutex};
+
 
 pub struct AudioPlayer{ //audio player includes the waveform, the pause/play btn, and the time indicator
     pub path: Option<String>,
@@ -20,6 +22,8 @@ pub struct AudioPlayer{ //audio player includes the waveform, the pause/play btn
     stream_handle: OutputStreamHandle,
     sink: Option<Sink>,
     pub audio_player_state: AudioPlayerState,
+    thread2: runtime::Runtime,
+    image_loaded: Arc<Mutex<bool>>
 }
 
 pub enum AudioPlayerState{
@@ -28,35 +32,24 @@ pub enum AudioPlayerState{
 }
 
 impl AudioPlayer{
-    pub fn new(handle: OutputStreamHandle) -> Self{
+    pub fn new(handle: OutputStreamHandle, thread2: runtime::Runtime) -> Self{
         Self{
-            path: None, //This is the default path of the music player. By default it won't play because its waiting to load a file
+            path: None, //This is the default path of the music player. By default, it won't play because its waiting to load a file
             current_time: 0.0,
             playback_time: 0.0,
             stream_handle: handle,
             sink: None,
             audio_player_state: AudioPlayerState::PAUSED,
+            thread2,
+            image_loaded: Arc::new(Mutex::new(false))
         }
     } //creates a new default audio player
+
+
     pub fn startup(&mut self){ //load sink and song when you load it via fileloader (yt or local), also generate the waveform image
         if let Some(path) = &self.path{
             let sink = Sink::try_new(&self.stream_handle).expect("Couldn't make sink");
             let s: Song = Song{ path: String::from(path)}; //base song can make modifications via clips
-
-            let f_name = format!("{}.png", s.get_name());
-            let mut p: PathBuf = PathBuf::from("waveforms/");
-            p.push(&f_name);
-            if !Path::new(&p).exists(){
-                //Generate png if it doesn't exist already
-                println!("Waveform not found, making one now. Saving as {:?}", p);
-                waveform_static_png_visualize(
-                    &s.get_samples(),
-                    Channels::Mono,
-                    "waveforms/",
-                    &f_name,
-                );
-            }else{ println!("Path exists at {:?}", p); }
-
 
             self.playback_time = s.original_duration().as_secs_f32(); //not good at downloading really short videos
             let clip1 = s.clip(1.0, 0.0, self.playback_time, false); //full song
@@ -66,6 +59,35 @@ impl AudioPlayer{
             sink.pause();
 
             self.sink = Some(sink);
+
+            let f_name = format!("{}.png", s.get_name());
+
+            let mut p: PathBuf = PathBuf::from("waveforms/");
+            p.push(&f_name);
+            if !Path::new(&p).exists(){
+                //Generate png if it doesn't exist already
+                println!("Waveform not found, making one now. Saving as {:?}", p);
+
+                let loaded = Arc::clone(&self.image_loaded); //cloning arc
+
+                self.thread2.spawn(async move { //move means it will take ownership of variables
+                    waveform_static_png_visualize(
+                        &s.get_samples(),
+                        Channels::Mono,
+                        "waveforms/",
+                        &f_name,
+                    );
+
+                    let mut state = loaded.lock().unwrap();
+                    *state = true;
+                    println!("Image generated")
+                });
+
+            }else{
+                *self.image_loaded.lock().unwrap() = true;
+                println!("Path exists at {:?}", p);
+            }
+
         }else{ println!("No file has been loaded. Please download from youtube, or load a local song") }
     }
     fn skip_to(&mut self, time: f32){
@@ -108,28 +130,28 @@ impl AudioPlayer{
 
         ui.painter().rect_filled(rect, 25, Color32::DARK_GRAY);
 
+        //painting waveform
+        if *self.image_loaded.lock().unwrap() {
+            if let Some(path) = &self.path {
+                //self.path is the song path, and the song name is the same as the image name, so we can extract it using the regex from earlier
+                let name = Song { path: String::from(path) }.get_name();
+                let path = format!("waveforms/{}.png", name);
+                // println!("Loading image from {}", path);
 
-        if let Some(path) = &self.path{
-            //self.path is the song path, and the song name is the same as the image name, so we can extract it using the regex from earlier
-            let name = Song{ path: String::from(path) }.get_name();
-            let path = format!("waveforms/{}.png", name);
-            println!("Loading image from {}", path);
+                let mut buffer = vec![];
+                File::open(path)
+                    .unwrap()
+                    .read_to_end(&mut buffer)
+                    .unwrap();
 
-            let mut buffer = vec![];
-            File::open(path)
-                .unwrap()
-                .read_to_end(&mut buffer)
-                .unwrap();
+                let image = Image::from_bytes("image_id", buffer)
+                    .corner_radius(25)
+                    .max_width(650.0)
+                    .fit_to_original_size(1.0);
 
-            let image = Image::from_bytes("image_id", buffer)
-                .corner_radius(25)
-                .max_width(650.0)
-                .fit_to_original_size(1.0);
-
-            ui.put(rect, image);
-
+                ui.put(rect, image);
+            }
         }
-
 
 
 

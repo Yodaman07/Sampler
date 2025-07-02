@@ -3,10 +3,11 @@ use crate::file_loader::FileLoader;
 use eframe::emath::Vec2;
 use egui::{Color32, Rect, Response, Theme, Ui, Widget};
 use rodio::OutputStreamHandle;
+use tokio::runtime;
 
 pub struct SamplerApp{
     file_loader: FileLoader,
-    audio_player: AudioPlayer
+    audio_player: AudioPlayer,
 }
 
 //Default boilerplate stuff from https://github.com/emilk/egui/blob/main/examples/hello_world/src/main.rs
@@ -57,7 +58,10 @@ impl SamplerApp{
     fn new( stream_handle: OutputStreamHandle) -> Self {
         Self{
             file_loader: FileLoader::new(),
-            audio_player: AudioPlayer::new(stream_handle)
+            audio_player: AudioPlayer::new(stream_handle, runtime::Builder::new_multi_thread()
+                                                .enable_all()
+                                                .build()
+                                                .unwrap()),
         }
     }
 
