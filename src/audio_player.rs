@@ -1,8 +1,8 @@
 use crate::Song;
 use audio_visualizer::waveform::png_file::waveform_static_png_visualize;
 use audio_visualizer::Channels;
-use eframe::emath::Vec2;
-use eframe::epaint::Color32;
+use eframe::emath::{Align2, Vec2};
+use eframe::epaint::{Color32, FontFamily, FontId};
 use egui::{include_image, vec2, Image, Rect, Ui};
 use rodio::{OutputStreamHandle, Sink};
 use std::fs::File;
@@ -197,11 +197,27 @@ impl AudioPlayer{
             // ui.add_space(30.0);
         });
 
+
         if ui.button("TrackTime").clicked(){ //UNSAFE
             let time = self.sink.as_ref().unwrap().get_pos();
             println!("Current Time {:?}", time); //This is the time since the clip started. Need to account for starting delay and any speed changes
         }
-        // ui.add_space(5.0);
+
+        let font = FontId::new(14.0, FontFamily::default());
+
+        let start_m = egui::Button::new(egui::RichText::new("Place Start Marker").font(font.clone()).strong())
+            .corner_radius(13)
+            .fill(Color32::from_rgb(60,60,60));
+
+        let end_m = egui::Button::new(egui::RichText::new("Place End Marker").font(font).strong())
+            .corner_radius(13)
+            .fill(Color32::from_rgb(60,60,60));
+
+        ui.horizontal(|ui|{
+            ui.add_space(200.0);
+            ui.add_sized([140.0, 30.0], start_m);
+            ui.add_sized([140.0, 30.0], end_m);
+        });
 
     }
 }
