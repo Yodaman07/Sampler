@@ -3,7 +3,7 @@ use audio_visualizer::waveform::png_file::waveform_static_png_visualize;
 use audio_visualizer::Channels;
 use eframe::emath::Vec2;
 use eframe::epaint::Color32;
-use egui::{include_image, Image, Ui};
+use egui::{include_image, vec2, Image, Rect, Ui};
 use rodio::{OutputStreamHandle, Sink};
 use std::fs::File;
 use std::io::Read;
@@ -36,7 +36,7 @@ impl AudioPlayer{
         Self{
             path: None, //This is the default path of the music player. By default, it won't play because it's waiting to load a file
             current_time: 0.0,
-            playback_time: 0.0,
+            playback_time: 0.0, //total length of track
             stream_handle: handle,
             sink: None,
             audio_player_state: AudioPlayerState::PAUSED,
@@ -54,14 +54,13 @@ impl AudioPlayer{
             self.playback_time = s.original_duration().as_secs_f32(); //not good at downloading really short videos
             let clip1 = s.clip(1.0, 0.0, self.playback_time, false); //full song
 
-            //Sink is like the audio player
+            //Sink is what is actually playing the music
             sink.append(clip1);
             sink.pause();
-
             self.sink = Some(sink);
 
-            let f_name = format!("{}.png", s.get_name());
 
+            let f_name = format!("{}.png", s.get_name());
             let mut p: PathBuf = PathBuf::from("waveforms/");
             p.push(&f_name);
             if !Path::new(&p).exists(){
@@ -69,7 +68,6 @@ impl AudioPlayer{
                 println!("Waveform not found, making one now. Saving as {:?}", p);
 
                 let loaded = Arc::clone(&self.image_loaded); //cloning arc
-
                 self.thread2.spawn(async move { //move means it will take ownership of variables
                     waveform_static_png_visualize(
                         &s.get_samples(),
@@ -83,11 +81,10 @@ impl AudioPlayer{
                     println!("Image generated")
                 });
 
-            }else{
+            }else{ //image already exists on device
                 *self.image_loaded.lock().unwrap() = true;
                 println!("Path exists at {:?}", p);
             }
-
         }else{ println!("No file has been loaded. Please download from youtube, or load a local song") }
     }
     fn skip_to(&mut self, time: f32){
@@ -114,22 +111,8 @@ impl AudioPlayer{
 
         (pos/window_space) * self.playback_time
     }
-    pub fn construct(&mut self, ui: &mut Ui){
-        //Song player
 
-        let rect = egui::Rect::from_two_pos(egui::pos2(100.0, 10.0), egui::pos2(750.0, 60.0));
-        let resp = ui.allocate_rect(rect, egui::Sense::CLICK);
-
-        if resp.clicked(){
-            let pos = resp.interact_pointer_pos().expect("Error getting mouse position");
-            let accurate_x = pos.x - 100.0; //100 pixel offset from the left of the screen
-            println!("{}", accurate_x);
-
-            self.skip_to(self.get_time_from_pos(accurate_x));
-        }
-
-        ui.painter().rect_filled(rect, 25, Color32::DARK_GRAY);
-
+    fn paint_waveform(&self, ui: &mut Ui, target: Rect){
         //painting waveform
         if *self.image_loaded.lock().unwrap() {
             if let Some(path) = &self.path {
@@ -148,14 +131,15 @@ impl AudioPlayer{
                     .corner_radius(25)
                     .max_width(650.0)
                     .fit_to_original_size(1.0);
-
-                ui.put(rect, image);
+                ui.put(target, image);
+                //height is 65.0 and width is 650.0
             }
         }
+    }
+    pub fn construct(&mut self, ui: &mut Ui){
+        const PLAYER_LEFT_OFFSET: f32 = 100.0; //the audio player starts 100 pixels from the left of the screen
 
-
-
-        if let Some(s) = &self.sink {
+        if let Some(s) = &self.sink { //handles the auto pause at the end of the track, may be buggy
             self.current_time = s.get_pos().as_secs_f32();
 
             if self.current_time >= self.playback_time{
@@ -163,19 +147,19 @@ impl AudioPlayer{
                 s.pause();
                 self.audio_player_state = AudioPlayerState::PAUSED; //will auto pause the song at the end
             }
-
         }
 
-        //yellow pointer
-        let pos = self.get_pos_from_time();
-        ui.painter().rect_filled(egui::Rect::from_two_pos(egui::pos2(100.0 + pos, 10.0), egui::pos2(105.0 + pos, 60.0)), 10, Color32::YELLOW);
 
         ui.horizontal(|ui| {
-            ui.add_space(30.0);
-            if ui.add_sized(Vec2::new(40.0, 40.0), egui::Button::image( self.get_player_icon().clone() )).clicked(){
-                match &self.sink{
-                    None => self.startup(), //if sink doesn't exist, this will make it and load a clip
-                    Some(sink) => {
+
+            ui.add_space(10.0);
+            ui.vertical(|ui|{
+                ui.add_space(-6.0); // bring it back to the top of the screen
+                ui.add_space(12.5); //move down 10 to match the player rect
+                let control_button = egui::Button::image( self.get_player_icon().clone() )
+                    .corner_radius(13);
+                if ui.add_sized([55.0, 55.0], control_button).clicked(){
+                    if let Some(sink) = &self.sink{
                         match &self.audio_player_state{
                             AudioPlayerState::PAUSED => {
                                 sink.play();
@@ -188,16 +172,36 @@ impl AudioPlayer{
                                 self.audio_player_state = AudioPlayerState::PAUSED;
                             }
                         };
-                    }
+                    }else { self.startup() } //initializing the sink if it doesn't exist
                 }
+            });
+
+            //Song player
+            let player_rect = Rect::from_two_pos(egui::pos2(PLAYER_LEFT_OFFSET, 10.0), egui::pos2(650.0 + PLAYER_LEFT_OFFSET, 75.0));
+            let resp = ui.allocate_rect(player_rect, egui::Sense::CLICK);
+
+            if resp.clicked(){ //scrolling along the song
+                let pos = resp.interact_pointer_pos().expect("Error getting mouse position");
+                let accurate_x = pos.x - PLAYER_LEFT_OFFSET; //100 pixel offset from the left of the screen
+                println!("scroll to{}", accurate_x);
+
+                self.skip_to(self.get_time_from_pos(accurate_x));
             }
+
+            ui.painter().rect_filled(player_rect, 25, Color32::DARK_GRAY);
+            self.paint_waveform(ui, player_rect); //loads the waveform and paints it to the player rectangle
+
+            //trackhead (where you are in the song
+            let pos = self.get_pos_from_time();
+            ui.painter().rect_filled(Rect::from_two_pos(egui::pos2(PLAYER_LEFT_OFFSET + pos, 10.0), egui::pos2(PLAYER_LEFT_OFFSET + 9.0 + pos, 75.0)), 10, Color32::WHITE); //height is 65.0
+            // ui.add_space(30.0);
         });
 
         if ui.button("TrackTime").clicked(){ //UNSAFE
             let time = self.sink.as_ref().unwrap().get_pos();
             println!("Current Time {:?}", time); //This is the time since the clip started. Need to account for starting delay and any speed changes
         }
-        ui.add_space(5.0);
+        // ui.add_space(5.0);
 
     }
 }

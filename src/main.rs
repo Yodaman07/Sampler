@@ -9,6 +9,8 @@ use std::io::BufReader;
 use std::time::Duration;
 
 //BUG YOU CAN CLICK OUT OF BOUNDS ON THE PLAYING SONG
+//TODO load images assets before they are needed
+//TODO make images look cool
 pub struct Song{ path: String }
 impl Song {
     fn new(&self) -> Decoder<BufReader<File>> { //opens and decodes song
