@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex};
 
 
 pub struct AudioPlayer{ //audio player includes the waveform, the pause/play btn, and the time indicator
-    pub path: Option<String>,
+    pub path: Option<String>,  //representing if a song file has been loaded or not yet
     current_time: f32,
     playback_time: f32, //total time
     stream_handle: OutputStreamHandle,
@@ -34,7 +34,7 @@ pub enum AudioPlayerState{
 impl AudioPlayer{
     pub fn new(handle: OutputStreamHandle, thread2: runtime::Runtime) -> Self{
         Self{
-            path: None, //This is the default path of the music player. By default, it won't play because its waiting to load a file
+            path: None, //This is the default path of the music player. By default, it won't play because it's waiting to load a file
             current_time: 0.0,
             playback_time: 0.0,
             stream_handle: handle,
@@ -46,7 +46,7 @@ impl AudioPlayer{
     } //creates a new default audio player
 
 
-    pub fn startup(&mut self){ //load sink and song when you load it via fileloader (yt or local), also generate the waveform image
+    pub fn startup(&mut self){ //load sink and song when you load it via file loader (yt or local), also generate the waveform image
         if let Some(path) = &self.path{
             let sink = Sink::try_new(&self.stream_handle).expect("Couldn't make sink");
             let s: Song = Song{ path: String::from(path)}; //base song can make modifications via clips
@@ -122,7 +122,7 @@ impl AudioPlayer{
 
         if resp.clicked(){
             let pos = resp.interact_pointer_pos().expect("Error getting mouse position");
-            let accurate_x = pos.x - 100.0; //100 pixel offset from left of the screen
+            let accurate_x = pos.x - 100.0; //100 pixel offset from the left of the screen
             println!("{}", accurate_x);
 
             self.skip_to(self.get_time_from_pos(accurate_x));
@@ -168,7 +168,7 @@ impl AudioPlayer{
 
         //yellow pointer
         let pos = self.get_pos_from_time();
-        ui.painter().rect_filled(egui::Rect::from_two_pos(egui::pos2((100.0 + pos), 10.0), egui::pos2((105.0 + pos), 60.0)), 10, Color32::YELLOW);
+        ui.painter().rect_filled(egui::Rect::from_two_pos(egui::pos2(100.0 + pos, 10.0), egui::pos2(105.0 + pos, 60.0)), 10, Color32::YELLOW);
 
         ui.horizontal(|ui| {
             ui.add_space(30.0);

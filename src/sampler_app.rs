@@ -31,7 +31,7 @@ pub fn init_app(stream_handle: OutputStreamHandle) -> eframe::Result{
 
 impl eframe::App for SamplerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if matches!(self.audio_player.audio_player_state, AudioPlayerState::PLAYING) { //ai help
+        if matches!(self.audio_player.audio_player_state, AudioPlayerState::PLAYING) { //AI help
             ctx.request_repaint(); // This forces egui to update continuously
         }
 
@@ -46,7 +46,7 @@ impl eframe::App for SamplerApp {
             .show(ctx, |ui| {
                 //App content goes here
                 
-                self.audio_player.construct(ui); // ai help, but it is a compact way to display the audio player
+                self.audio_player.construct(ui); // AI help, but it is a compact way to display the audio player
                 ui.add_space(10.0);
                 self.file_loader.construct(&mut self.audio_player, ui);
         });
@@ -67,12 +67,10 @@ impl SamplerApp{
 
 
     pub fn add_rel_to_rect(ui: &mut Ui, panel: Rect, widget: impl Widget, widget_offset: Vec2, widget_size: Vec2) -> Response { //method for adding a component relative to a rect
-
         let widget_rect = Rect::from_min_size(
            panel.min + widget_offset, //offset is like padding
             widget_size  // width and height
         );
-
         ui.put(widget_rect, widget)
     }
 }

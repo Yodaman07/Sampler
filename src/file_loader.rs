@@ -1,27 +1,24 @@
 use crate::audio_player::AudioPlayer;
 use crate::sampler_app::SamplerApp;
 use egui::{Align2, Color32, FontFamily, FontId, Pos2, Rect, Ui, Vec2};
-use std::fmt::{Debug, Pointer};
 use youtube_dl::{YoutubeDl, YoutubeDlOutput};
 
 #[derive(PartialEq)]
 enum Tabs{ LOCAL, YTDl}
 pub struct FileLoader{
-    path: Option<String>, //representing if a song file has been loaded or not yet
     yt_url: String,
     tab: Tabs //loading a file from yt or locally?
 }
 impl FileLoader{
     pub fn new() -> Self{
         Self{
-            path: None,
             yt_url: String::from(""),
             tab: Tabs::YTDl
         }
     } //new default file loader
     fn download_file(&self) -> Option<String> { //if couldn't dl, will return none
         println!("Downloading video at {}", self.yt_url);
-        //grab metadata first then download file
+        //grab metadata first, then download the file
         let metadata : Result<YoutubeDlOutput, youtube_dl::Error> = YoutubeDl::new(&self.yt_url)
             .socket_timeout("15")
             .run();
@@ -35,7 +32,7 @@ impl FileLoader{
         let metadata = metadata.unwrap();
         let title = metadata.into_single_video().unwrap().title.expect("Error getting video title");
 
-        let output = YoutubeDl::new(&self.yt_url)
+        YoutubeDl::new(&self.yt_url)
             .socket_timeout("15") // after 15s, a failed download will be reported
             .output_template(format!("{}.%(ext)s", title))
             .extract_audio(true)
@@ -56,7 +53,7 @@ impl FileLoader{
 
         ui.add_space(109.0);
 
-        //make the selectable laels we will add later
+        //make the selectable labels we will add later
         let ytdl_label = egui::SelectableLabel::new(
             self.tab == Tabs::YTDl,
             egui::RichText::new("YTDL").color(Color32::WHITE)
@@ -79,12 +76,11 @@ impl FileLoader{
             Tabs::YTDl => {
                 let edit =egui::TextEdit::singleline(&mut self.yt_url)
                     .desired_width(157.0)
-                    .text_color(egui::Color32::BLACK);
+                    .text_color(Color32::BLACK);
 
                 SamplerApp::add_rel_to_rect(ui, panel, edit, Vec2::new(18.5, 40.0), Vec2::new(157.0, 20.0));
                 let download_btn = SamplerApp::add_rel_to_rect(ui, panel, egui::Button::new("Download Video"), Vec2::new(57.0, 80.0),  Vec2::new(80.0, 20.0));
                 //btn is 63 x 30
-
 
                 if download_btn.clicked(){
                     let title: Option<String> = self.download_file();
@@ -112,9 +108,9 @@ impl FileLoader{
             }
         }
 
-        let font = FontId::new(10.0, FontFamily::default());
+        let font = FontId::new(12.0, FontFamily::default());
 
-        //10 pixel paddinga
+        //10 pixel padding
         ui.painter().text(panel.center_bottom()+Vec2::new(0.0, -10.0), Align2::CENTER_BOTTOM, format!("Currently Loaded Track: {:?}", audio_player.path),font, Color32::WHITE);
     }
 }
