@@ -1,6 +1,7 @@
 mod sampler_app;
 mod audio_player;
 mod file_loader;
+mod chop_editor;
 
 use regex::Regex;
 use rodio::{source::Source, Decoder, OutputStream};

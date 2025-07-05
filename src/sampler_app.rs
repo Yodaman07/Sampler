@@ -1,5 +1,6 @@
 use crate::audio_player::{AudioPlayer, AudioPlayerState};
 use crate::file_loader::FileLoader;
+use crate::chop_editor::ChopEditor;
 use eframe::emath::Vec2;
 use egui::{Color32, Rect, Response, Theme, Ui, Widget};
 use rodio::OutputStreamHandle;
@@ -8,7 +9,9 @@ use tokio::runtime;
 pub struct SamplerApp{
     file_loader: FileLoader,
     audio_player: AudioPlayer,
+    chop_editor: ChopEditor
 }
+
 
 //Default boilerplate stuff from https://github.com/emilk/egui/blob/main/examples/hello_world/src/main.rs
 pub fn init_app(stream_handle: OutputStreamHandle) -> eframe::Result{
@@ -31,8 +34,9 @@ pub fn init_app(stream_handle: OutputStreamHandle) -> eframe::Result{
 
 impl eframe::App for SamplerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ctx.request_repaint(); // This forces egui to update continuously
         if matches!(self.audio_player.audio_player_state, AudioPlayerState::PLAYING) { //AI help
-            ctx.request_repaint(); // This forces egui to update continuously
+            
         }
 
         ctx.style_mut(|style| {
@@ -49,6 +53,8 @@ impl eframe::App for SamplerApp {
                 self.audio_player.construct(ui); // AI help, but it is a compact way to display the audio player
                 ui.add_space(10.0);
                 self.file_loader.construct(&mut self.audio_player, ui);
+                ui.add_space(20.0);
+                self.chop_editor.construct(ui, &mut self.audio_player);
         });
 
     }
@@ -62,6 +68,12 @@ impl SamplerApp{
                                                 .enable_all()
                                                 .build()
                                                 .unwrap()),
+
+            chop_editor: ChopEditor{
+                chops: Vec::new(),
+                selected_index: 0,
+                play: false
+            }
         }
     }
 

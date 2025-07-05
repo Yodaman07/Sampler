@@ -1,9 +1,8 @@
 use crate::Song;
 use audio_visualizer::waveform::png_file::waveform_static_png_visualize;
 use audio_visualizer::Channels;
-use eframe::emath::{Align2, Vec2};
-use eframe::epaint::{Color32, FontFamily, FontId};
-use egui::{include_image, vec2, Image, Rect, Ui};
+use eframe::epaint::Color32;
+use egui::{include_image, Image, Rect, Ui};
 use rodio::{OutputStreamHandle, Sink};
 use std::fs::File;
 use std::io::Read;
@@ -11,16 +10,19 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 //threads
-use tokio::runtime;
 use std::sync::{Arc, Mutex};
+use tokio::runtime;
+
+
+pub(crate) const PLAYER_LEFT_OFFSET: f32 = 100.0; //the audio player starts 100 pixels from the left of the screen
 
 
 pub struct AudioPlayer{ //audio player includes the waveform, the pause/play btn, and the time indicator
     pub path: Option<String>,  //representing if a song file has been loaded or not yet
-    current_time: f32,
-    playback_time: f32, //total time
+    pub current_time: f32,
+    pub playback_time: f32, //total time
     stream_handle: OutputStreamHandle,
-    sink: Option<Sink>,
+    pub(crate) sink: Option<Sink>,
     pub audio_player_state: AudioPlayerState,
     thread2: runtime::Runtime,
     image_loaded: Arc<Mutex<bool>>
@@ -87,7 +89,7 @@ impl AudioPlayer{
             }
         }else{ println!("No file has been loaded. Please download from youtube, or load a local song") }
     }
-    fn skip_to(&mut self, time: f32){
+    pub fn skip_to(&mut self, time: f32){
         // let res = self.sink.as_ref().unwrap().try_seek(Duration::from_secs_f32(time));
         if let Some(s) = self.sink.as_ref(){
             s.try_seek(Duration::from_secs_f32(time)).expect("Error skipping content");
@@ -100,9 +102,10 @@ impl AudioPlayer{
             AudioPlayerState::PLAYING => { Image::from(include_image!("../imgs/pause.svg")) }
         }
     }
-    fn get_pos_from_time(&self) -> f32{ //650 pixel long play area
+    pub fn get_pos_from_time(&self, time: Option<f32>) -> f32{ //650 pixel long play area
         let window_space = 650.0;
-        (window_space/self.playback_time) * self.current_time
+        if let Some(t) = time{ (window_space/self.playback_time) * t }
+        else {(window_space/self.playback_time) * self.current_time}
     }
     fn get_time_from_pos(&self, pos: f32) -> f32{
         let window_space = 650.0;
@@ -137,8 +140,6 @@ impl AudioPlayer{
         }
     }
     pub fn construct(&mut self, ui: &mut Ui){
-        const PLAYER_LEFT_OFFSET: f32 = 100.0; //the audio player starts 100 pixels from the left of the screen
-
         if let Some(s) = &self.sink { //handles the auto pause at the end of the track, may be buggy
             self.current_time = s.get_pos().as_secs_f32();
 
@@ -183,7 +184,7 @@ impl AudioPlayer{
             if resp.clicked(){ //scrolling along the song
                 let pos = resp.interact_pointer_pos().expect("Error getting mouse position");
                 let accurate_x = pos.x - PLAYER_LEFT_OFFSET; //100 pixel offset from the left of the screen
-                println!("scroll to{}", accurate_x);
+                println!("scroll to {}", accurate_x);
 
                 self.skip_to(self.get_time_from_pos(accurate_x));
             }
@@ -191,33 +192,17 @@ impl AudioPlayer{
             ui.painter().rect_filled(player_rect, 25, Color32::DARK_GRAY);
             self.paint_waveform(ui, player_rect); //loads the waveform and paints it to the player rectangle
 
-            //trackhead (where you are in the song
-            let pos = self.get_pos_from_time();
+            //trackhead (where you are in the song)
+            let pos = self.get_pos_from_time(None);
             ui.painter().rect_filled(Rect::from_two_pos(egui::pos2(PLAYER_LEFT_OFFSET + pos, 10.0), egui::pos2(PLAYER_LEFT_OFFSET + 9.0 + pos, 75.0)), 10, Color32::WHITE); //height is 65.0
-            // ui.add_space(30.0);
         });
-
 
         if ui.button("TrackTime").clicked(){ //UNSAFE
             let time = self.sink.as_ref().unwrap().get_pos();
             println!("Current Time {:?}", time); //This is the time since the clip started. Need to account for starting delay and any speed changes
         }
 
-        let font = FontId::new(14.0, FontFamily::default());
 
-        let start_m = egui::Button::new(egui::RichText::new("Place Start Marker").font(font.clone()).strong())
-            .corner_radius(13)
-            .fill(Color32::from_rgb(60,60,60));
-
-        let end_m = egui::Button::new(egui::RichText::new("Place End Marker").font(font).strong())
-            .corner_radius(13)
-            .fill(Color32::from_rgb(60,60,60));
-
-        ui.horizontal(|ui|{
-            ui.add_space(200.0);
-            ui.add_sized([140.0, 30.0], start_m);
-            ui.add_sized([140.0, 30.0], end_m);
-        });
 
     }
 }

@@ -63,15 +63,13 @@ impl FileLoader{
             egui::RichText::new("Local").color(Color32::WHITE)
         );
 
-
+        
         SamplerApp::add_rel_to_rect(ui, panel, ytdl_label, Vec2::new(10.0, 10.0), Vec2::new(80.0, 15.0))
             .clicked().then(|| self.tab = Tabs::YTDl);
 
         SamplerApp::add_rel_to_rect(ui, panel, local_label, Vec2::new(100.0, 10.0), Vec2::new(80.0, 15.0))
             .clicked().then(|| self.tab = Tabs::LOCAL);
-
-
-
+        
         match self.tab {
             Tabs::YTDl => {
                 let edit =egui::TextEdit::singleline(&mut self.yt_url)
@@ -109,7 +107,6 @@ impl FileLoader{
         }
 
         let font = FontId::new(12.0, FontFamily::default());
-
         //10 pixel padding
         ui.painter().text(panel.center_bottom()+Vec2::new(0.0, -10.0), Align2::CENTER_BOTTOM, format!("Currently Loaded Track: {:?}", audio_player.path),font, Color32::WHITE);
     }
