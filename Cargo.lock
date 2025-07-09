@@ -12,6 +12,7 @@ dependencies = [
  "egui_extras",
  "image 0.25.6",
  "log",
+ "random_color",
  "regex",
  "rfd",
  "rodio",
@@ -3676,6 +3677,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
  "getrandom 0.3.3",
+]
+
+[[package]]
+name = "random_color"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d635c5e80ae160390ac62ca027d2d06c94c1dc69e5c0a12f1e3a53664dc84966"
+dependencies = [
+ "rand 0.9.1",
+ "rgb",
 ]
 
 [[package]]

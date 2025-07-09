@@ -195,6 +195,9 @@ impl AudioPlayer{
             //trackhead (where you are in the song)
             let pos = self.get_pos_from_time(None);
             ui.painter().rect_filled(Rect::from_two_pos(egui::pos2(PLAYER_LEFT_OFFSET + pos, 10.0), egui::pos2(PLAYER_LEFT_OFFSET + 9.0 + pos, 75.0)), 10, Color32::WHITE); //height is 65.0
+
+
+            ui.label(format!("{:.2?}/{:.2?}", Duration::from_secs_f32(self.current_time), Duration::from_secs_f32(self.playback_time)));
         });
 
         if ui.button("TrackTime").clicked(){ //UNSAFE
