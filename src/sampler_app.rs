@@ -72,7 +72,7 @@ impl SamplerApp{
             chop_editor: ChopEditor{
                 chops: Vec::new(),
                 selected_index: 0,
-                play: false
+                play: false,
             }
         }
     }

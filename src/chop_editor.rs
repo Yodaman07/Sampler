@@ -1,5 +1,5 @@
 use eframe::epaint::{Color32, FontFamily, FontId, StrokeKind};
-use egui::{include_image, ImageSource, Pos2, Rect, Response, Stroke, Ui, Vec2};
+use egui::{include_image, ImageSource, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
 use random_color::RandomColor;
 use crate::audio_player::{AudioPlayer, PLAYER_LEFT_OFFSET};
 
@@ -11,8 +11,12 @@ pub struct Marker{
 pub struct Chop{
     start: Option<Marker>,
     end: Option<Marker>,
+
     col: Color32,
     rect: Rect,
+    offset: f32,
+    drag_start: f32,
+
     speed: f32,
     pitch: f32,
     volume: f32,
@@ -23,7 +27,7 @@ pub struct Chop{
 pub struct ChopEditor{
     pub chops: Vec<Chop>,
     pub selected_index: usize,
-    pub(crate) play: bool
+    pub play: bool,
 }
 
 impl Chop{
@@ -35,6 +39,9 @@ impl Chop{
             end: None,
             col: Color32::from_rgb(col.r, col.g, col.b),
             rect: Rect::from_min_size(Pos2::new(0.0,0.0), Vec2::new(0.0,0.0)),
+            offset: 0.0,
+            drag_start: 0.0,
+
             speed: 0.0,
             pitch: 0.0,
             volume: 0.0,
@@ -43,9 +50,9 @@ impl Chop{
         }
     }
 
-    fn render(&mut self, ui: &mut Ui, surface: Rect, offset: f32){ //surface is the editor
+    fn render(&mut self, ui: &mut Ui, surface: Rect){ //surface is the editor
         let mut pos: Pos2 = surface.min;
-        pos.x += offset;
+        pos.x += self.offset;
 
         let r = Rect::from_min_size(pos, Vec2::new(100.0, surface.height()));
 
@@ -121,8 +128,8 @@ impl ChopEditor{
 
             if let Some(sink) = audio_player.sink.as_ref() {
                 let chops = &mut self.chops;
-                if chops.is_empty() { println!("Please select a chop to modify before continuing") } 
-                else {
+                // if chops.is_empty() { println!("Please select a chop to modify before continuing") }
+                if !chops.is_empty() {
                     let current = audio_player.current_time;
 
                     if start_btn.clicked() { chops[self.selected_index].start = Some(Marker::new(chops[self.selected_index].col, sink.get_pos().as_secs_f32())) }
@@ -156,16 +163,38 @@ impl ChopEditor{
         if new_btn(ui,"New Chop", [140.0, 30.0], Pos2::new(10.0,310.0)).clicked(){
             if audio_player.path.is_none(){
                 println!("Please load a song before continuing")
-            }else { self.chops.push(Chop::new()); }
+            }else {  }
+            self.chops.push(Chop::new());
         }
 
         new_btn(ui,"Color: ", [140.0, 30.0], Pos2::new(10.0,345.0)); //just display for now
         let chop_timeline = Rect::from_two_pos(egui::pos2(175.0, 310.0), egui::pos2(650.0 + 175.0, 375.0));
         ui.painter().rect_filled(chop_timeline, 25, Color32::DARK_GRAY);
-        let resp = ui.allocate_rect(chop_timeline, egui::Sense::CLICK);
+        let resp = ui.allocate_rect(chop_timeline, Sense::click_and_drag());
+        
+
+        if resp.drag_started(){
+            for (index, chop) in self.chops.iter_mut().enumerate()  {
+                let resp_rect = Rect::from_min_size(resp.interact_pointer_pos().unwrap(), Vec2::new(2.0, 2.0));
+                if chop.rect.contains_rect(resp_rect){ //The "selected index" is the rect you are dragging
+                    chop.drag_start = resp.interact_pointer_pos().unwrap().x - chop.offset; //subtract the chop offset so that if you click it for a second time, the start pos takes into account where it is already
+                    println!("Start pos is {}", chop.drag_start);
+                    self.selected_index = index;
+                }
+            }
+        }
+
+
+        if resp.dragged(){
+            let chops = &mut self.chops;
+            let mut specific_chop = &mut chops[self.selected_index];
+            specific_chop.offset = (resp.interact_pointer_pos().unwrap().x - specific_chop.drag_start).abs();
+        }
+
+
         if resp.clicked(){ //clicked anywhere on the screen
             for (index,chop) in self.chops.iter().enumerate()  {
-                let resp_rect = Rect::from_min_size(resp.interact_pointer_pos().unwrap(), Vec2::new(2.0,2.0));
+                let resp_rect = Rect::from_min_size(resp.interact_pointer_pos().unwrap(), Vec2::new(2.0, 2.0));
                 if chop.rect.contains_rect(resp_rect){
                     self.selected_index = index;
                     println!("Selected Chop: {}", index);
@@ -173,10 +202,10 @@ impl ChopEditor{
                 }
             }
         }
-        let mut offset = 0.0;
+
         for chop in &mut self.chops{
-            chop.render(ui, chop_timeline, offset);
-            offset+=200.0;
+            chop.render(ui, chop_timeline);
         }
+
     }
 }
