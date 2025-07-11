@@ -1,4 +1,4 @@
-use crate::audio_player::{AudioPlayer, PLAYER_LEFT_OFFSET};
+use crate::audio_player::{AudioPlayer, AudioPlayerState, PLAYER_LEFT_OFFSET};
 use eframe::epaint::{Color32, FontFamily, FontId, StrokeKind};
 use egui::{include_image, ImageSource, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
 use random_color::RandomColor;
@@ -27,7 +27,6 @@ pub struct Chop{
 pub struct ChopEditor{
     pub chops: Vec<Chop>,
     pub selected_index: Option<usize>, //Its none if there isn't a selected chop
-    pub play: bool,
     pub tint_col: Color32
 }
 
@@ -92,33 +91,37 @@ fn new_img_btn(ui: &mut Ui, img: ImageSource, size: impl Into<Vec2>, pos: Pos2) 
 }
 impl ChopEditor{
 
-    fn play_chop(&mut self, audio_player: &mut AudioPlayer){
+    fn player_mixin(&mut self, audio_player: &mut AudioPlayer){
 
         let current_time = audio_player.current_time;
-        let chop: &Chop = &self.chops[self.selected_index.expect("ERROR PLAYING BUT THIS CODE IS GETTING REPLACED ANYWAY - UNSAFE")];
+        if let Some(i) = self.selected_index {
+            let chop: &Chop = &self.chops[i];
 
-
-        if current_time >= chop.end.as_ref().unwrap().time{
-            audio_player.skip_to(chop.start.as_ref().unwrap().time);
+            match &audio_player.audio_player_state {
+                AudioPlayerState::PLAYING => {
+                    if current_time >= chop.end.as_ref().unwrap().time {
+                        audio_player.skip_to(chop.start.as_ref().unwrap().time);
+                    }
+                },
+                AudioPlayerState::PAUSED => {}
+            }
         }
     }
 
 
     pub fn construct(&mut self, ui: &mut Ui, audio_player: &mut AudioPlayer){
+        self.player_mixin(audio_player);
+
         ui.horizontal(|ui|{
             ui.add_space(300.0);
 
             let start_btn = new_btn(ui,"Place Start Marker", [140.0, 30.0], Pos2::new(210.0, 110.0));
 
             let left = new_img_btn(ui, include_image!("../imgs/left_arrow.svg"), [32.0,32.0], Pos2::new(210.0+20.0, 150.0));
-            let mini_play = new_img_btn(ui, include_image!("../imgs/pause.svg"), [40.0,40.0], Pos2::new(230.0+34.0, 150.0));
             let right = new_img_btn(ui, include_image!("../imgs/right_arrow.svg"), [32.0,32.0], Pos2::new(318.0-20.0, 150.0));
 
             let end_btn = new_btn(ui,"Place End Marker", [140.0, 30.0], Pos2::new(210.0, 190.0));
 
-            if self.play{
-                self.play_chop(audio_player);
-            }
 
             if let Some(sink) = audio_player.sink.as_ref() {
                 let chops = &mut self.chops;
@@ -142,12 +145,6 @@ impl ChopEditor{
                             audio_player.skip_to(current + 1.0);
                         }
                     }
-
-                    if mini_play.clicked() {
-                        audio_player.sink.as_ref().unwrap().play();
-                        self.play = true;
-                    }
-
                 }
             }
 

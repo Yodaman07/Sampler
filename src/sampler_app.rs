@@ -70,7 +70,6 @@ impl SamplerApp{
             chop_editor: ChopEditor{
                 chops: Vec::new(),
                 selected_index: None,
-                play: false,
                 tint_col: Color32::from_rgba_unmultiplied(0,0,0,0)
             }
         }
