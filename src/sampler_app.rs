@@ -1,6 +1,6 @@
 use crate::audio_player::{AudioPlayer, AudioPlayerState};
-use crate::file_loader::FileLoader;
 use crate::chop_editor::ChopEditor;
+use crate::file_loader::FileLoader;
 use eframe::emath::Vec2;
 use egui::{Color32, Rect, Response, Theme, Ui, Widget};
 use rodio::OutputStreamHandle;
@@ -42,8 +42,6 @@ impl eframe::App for SamplerApp {
         ctx.style_mut(|style| {
             style.visuals.selection.bg_fill = Color32::from_rgb(131, 173, 138);
             style.visuals.extreme_bg_color =  Color32::from_rgb(217, 217, 217); //text-edit bg color
-
-
         });
 
         egui::CentralPanel::default()
@@ -71,8 +69,9 @@ impl SamplerApp{
 
             chop_editor: ChopEditor{
                 chops: Vec::new(),
-                selected_index: 0,
+                selected_index: None,
                 play: false,
+                tint_col: Color32::from_rgba_unmultiplied(0,0,0,0)
             }
         }
     }

@@ -1,7 +1,7 @@
+use crate::audio_player::{AudioPlayer, PLAYER_LEFT_OFFSET};
 use eframe::epaint::{Color32, FontFamily, FontId, StrokeKind};
 use egui::{include_image, ImageSource, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
 use random_color::RandomColor;
-use crate::audio_player::{AudioPlayer, PLAYER_LEFT_OFFSET};
 
 pub struct Marker{
     col: Color32,
@@ -26,8 +26,9 @@ pub struct Chop{
 
 pub struct ChopEditor{
     pub chops: Vec<Chop>,
-    pub selected_index: usize,
+    pub selected_index: Option<usize>, //Its none if there isn't a selected chop
     pub play: bool,
+    pub tint_col: Color32
 }
 
 impl Chop{
@@ -94,7 +95,7 @@ impl ChopEditor{
     fn play_chop(&mut self, audio_player: &mut AudioPlayer){
 
         let current_time = audio_player.current_time;
-        let chop: &Chop = &self.chops[self.selected_index];
+        let chop: &Chop = &self.chops[self.selected_index.expect("ERROR PLAYING BUT THIS CODE IS GETTING REPLACED ANYWAY - UNSAFE")];
 
 
         if current_time >= chop.end.as_ref().unwrap().time{
@@ -104,13 +105,6 @@ impl ChopEditor{
 
 
     pub fn construct(&mut self, ui: &mut Ui, audio_player: &mut AudioPlayer){
-        if !self.chops.is_empty() {
-            let chop: &Chop = &self.chops[self.selected_index];
-
-            if let Some(c) = &chop.start {c.draw(ui, &audio_player);} //renders the markers if they exist
-            if let Some(c) = &chop.end {c.draw(ui, &audio_player);}
-        }
-
         ui.horizontal(|ui|{
             ui.add_space(300.0);
 
@@ -129,11 +123,11 @@ impl ChopEditor{
             if let Some(sink) = audio_player.sink.as_ref() {
                 let chops = &mut self.chops;
                 // if chops.is_empty() { println!("Please select a chop to modify before continuing") }
-                if !chops.is_empty() {
+                if let Some(i) = self.selected_index{
                     let current = audio_player.current_time;
 
-                    if start_btn.clicked() { chops[self.selected_index].start = Some(Marker::new(chops[self.selected_index].col, sink.get_pos().as_secs_f32())) }
-                    if end_btn.clicked() { chops[self.selected_index].end = Some(Marker::new(chops[self.selected_index].col, sink.get_pos().as_secs_f32())) };
+                    if start_btn.clicked() { chops[i].start = Some(Marker::new(chops[i].col, sink.get_pos().as_secs_f32())) }
+                    if end_btn.clicked() { chops[i].end = Some(Marker::new(chops[i].col, sink.get_pos().as_secs_f32())) };
 
                     if left.clicked() {
                         if current > 1.0 {
@@ -163,8 +157,8 @@ impl ChopEditor{
         if new_btn(ui,"New Chop", [140.0, 30.0], Pos2::new(10.0,310.0)).clicked(){
             if audio_player.path.is_none(){
                 println!("Please load a song before continuing")
-            }else {  }
-            self.chops.push(Chop::new());
+            }else {self.chops.push(Chop::new());}
+
         }
 
         new_btn(ui,"Color: ", [140.0, 30.0], Pos2::new(10.0,345.0)); //just display for now
@@ -175,31 +169,42 @@ impl ChopEditor{
 
         if resp.drag_started(){
             for (index, chop) in self.chops.iter_mut().enumerate()  {
-                let resp_rect = Rect::from_min_size(resp.interact_pointer_pos().unwrap(), Vec2::new(2.0, 2.0));
-                if chop.rect.contains_rect(resp_rect){ //The "selected index" is the rect you are dragging
+                let resp_rect = Rect::from_min_size(resp.interact_pointer_pos().unwrap(), Vec2::new(2.0, 2.0)); //the pointer rect is a 2x2
+                if chop.rect.contains_rect(resp_rect){ //Does auto-select the chop
                     chop.drag_start = resp.interact_pointer_pos().unwrap().x - chop.offset; //subtract the chop offset so that if you click it for a second time, the start pos takes into account where it is already
-                    println!("Start pos is {}", chop.drag_start);
-                    self.selected_index = index;
+                    self.selected_index = Some(index);
+                    self.tint_col = Color32::from_rgba_unmultiplied(chop.col.r(), chop.col.g(), chop.col.b(), 5);
+                    println!("Start pos is {}. Dragging {}", chop.drag_start, index);
                 }
             }
         }
 
 
         if resp.dragged(){
-            let chops = &mut self.chops;
-            let mut specific_chop = &mut chops[self.selected_index];
-            specific_chop.offset = (resp.interact_pointer_pos().unwrap().x - specific_chop.drag_start).abs();
+            if let Some(i) = self.selected_index {
+                let chops = &mut self.chops;
+                let specific_chop = &mut chops[i];
+                specific_chop.offset = (resp.interact_pointer_pos().unwrap().x - specific_chop.drag_start).abs();
+            }
         }
 
 
         if resp.clicked(){ //clicked anywhere on the screen
+            let mut focused = false;
             for (index,chop) in self.chops.iter().enumerate()  {
                 let resp_rect = Rect::from_min_size(resp.interact_pointer_pos().unwrap(), Vec2::new(2.0, 2.0));
                 if chop.rect.contains_rect(resp_rect){
-                    self.selected_index = index;
+                    focused = true;
+                    self.tint_col = Color32::from_rgba_unmultiplied(chop.col.r(), chop.col.g(), chop.col.b(), 5);
+                    self.selected_index = Some(index);
                     println!("Selected Chop: {}", index);
                     // println!("Size: {:?}", resp_rect)
                 }
+            }
+
+            if !focused{
+                self.selected_index = None; //de-selecting
+                self.tint_col = Color32::from_rgba_unmultiplied(0,0,0,0);
             }
         }
 
@@ -207,5 +212,13 @@ impl ChopEditor{
             chop.render(ui, chop_timeline);
         }
 
+        if let Some(i) = self.selected_index {
+            let chop: &Chop = &self.chops[i];
+
+            ui.painter().rect_filled(Rect::from_min_size(Pos2::new(0.0,0.0), Vec2::new(850.0, 400.0)), 0, self.tint_col);
+
+            if let Some(c) = &chop.start {c.draw(ui, &audio_player);} //renders the markers if they exist
+            if let Some(c) = &chop.end {c.draw(ui, &audio_player);}
+        }
     }
 }
