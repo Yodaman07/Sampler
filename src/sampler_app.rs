@@ -70,7 +70,9 @@ impl SamplerApp{
             chop_editor: ChopEditor{
                 chops: Vec::new(),
                 selected_index: None,
-                tint_col: Color32::from_rgba_unmultiplied(0,0,0,0)
+                tint_col: Color32::from_rgba_unmultiplied(0,0,0,0),
+                sink: None,
+                state: AudioPlayerState::PAUSED
             }
         }
     }

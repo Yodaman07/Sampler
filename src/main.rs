@@ -55,6 +55,5 @@ fn main() {
     // let video_title = download_file("https://youtu.be/YWXvj_fb1Ec?si=Y8jAqiHDAb3z3J9f");
     // let file = File::open(format!("music/{}.mp3", video_title)).expect("Couldn't open file");
 
-
     sampler_app::init_app(stream_handle).expect("Unable to open app");
 }

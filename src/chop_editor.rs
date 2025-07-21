@@ -2,6 +2,11 @@ use crate::audio_player::{AudioPlayer, AudioPlayerState, PLAYER_LEFT_OFFSET};
 use eframe::epaint::{Color32, FontFamily, FontId, StrokeKind};
 use egui::{include_image, ImageSource, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
 use random_color::RandomColor;
+use rodio::{OutputStream, OutputStreamHandle, Sink};
+use symphonia::core::conv::IntoSample;
+use crate::Song;
+
+
 
 pub struct Marker{
     col: Color32,
@@ -27,7 +32,9 @@ pub struct Chop{
 pub struct ChopEditor{
     pub chops: Vec<Chop>,
     pub selected_index: Option<usize>, //Its none if there isn't a selected chop
-    pub tint_col: Color32
+    pub tint_col: Color32,
+    pub sink: Option<Sink>,
+    pub state: AudioPlayerState,
 }
 
 impl Chop{
@@ -66,6 +73,8 @@ impl Chop{
         ui.painter().rect_filled(r, 15, Color32::WHITE);
         ui.painter().rect(r, 13, fill, Stroke::new(4.0, stroke), StrokeKind::Inside);
     }
+
+    fn is_valid(&self) -> bool{ self.start.is_some() && self.end.is_some() }
 }
 impl Marker{
     fn new(col: Color32, time: f32)-> Self {
@@ -91,28 +100,52 @@ fn new_img_btn(ui: &mut Ui, img: ImageSource, size: impl Into<Vec2>, pos: Pos2) 
 }
 impl ChopEditor{
 
-    fn player_mixin(&mut self, audio_player: &mut AudioPlayer){
+    fn player_mixin(&mut self, audio_player: &mut AudioPlayer){ //"mixin" code that will control the audio player --> referred to as a mixin bc of minecraft modding (i think its a java thing)
 
         let current_time = audio_player.current_time;
         if let Some(i) = self.selected_index {
             let chop: &Chop = &self.chops[i];
 
-            match &audio_player.audio_player_state {
-                AudioPlayerState::PLAYING => {
-                    if current_time >= chop.end.as_ref().unwrap().time {
-                        audio_player.skip_to(chop.start.as_ref().unwrap().time);
-                    }
-                },
-                AudioPlayerState::PAUSED => {}
+            let start = chop.start.as_ref();
+            let end = chop.end.as_ref();
+            if chop.is_valid() {
+                match &audio_player.audio_player_state {
+                    AudioPlayerState::PLAYING => {
+                        if current_time >= end.unwrap().time {
+                            audio_player.skip_to(start.unwrap().time);
+                        }
+                    },
+                    AudioPlayerState::PAUSED => {}
+                }
             }
         }
     }
 
+    fn startup(&mut self, audio_player: &AudioPlayer){
+
+        if !self.chops.is_empty() {
+            let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+
+            let sink = Sink::try_new(&stream_handle).expect("Couldn't make sink");
+            let s: Song = Song { path: String::from(audio_player.path.as_ref().unwrap()) }; //base song can make modifications via clips
+
+            for chop in &self.chops {
+                if chop.is_valid() {
+                    let chop = s.clip(1.0, chop.start.as_ref().unwrap().time, chop.end.as_ref().unwrap().time, false); //actual chop
+                    //Sink is what is actually playing the music
+                    sink.append(chop);
+                }
+            }
+            sink.pause();
+            self.sink = Some(sink);
+        }else { println!("There are no chops to play") }
+
+    }
 
     pub fn construct(&mut self, ui: &mut Ui, audio_player: &mut AudioPlayer){
         self.player_mixin(audio_player);
 
-        ui.horizontal(|ui|{
+        ui.horizontal(|ui|{ //top menu part
             ui.add_space(300.0);
 
             let start_btn = new_btn(ui,"Place Start Marker", [140.0, 30.0], Pos2::new(210.0, 110.0));
@@ -125,7 +158,6 @@ impl ChopEditor{
 
             if let Some(sink) = audio_player.sink.as_ref() {
                 let chops = &mut self.chops;
-                // if chops.is_empty() { println!("Please select a chop to modify before continuing") }
                 if let Some(i) = self.selected_index{
                     let current = audio_player.current_time;
 
@@ -147,22 +179,26 @@ impl ChopEditor{
                     }
                 }
             }
-
         });
 
-        ui.add_space(100.0);
-        if new_btn(ui,"New Chop", [140.0, 30.0], Pos2::new(10.0,310.0)).clicked(){
+        // ui.add_space(100.0);
+        if new_btn(ui,"New Chop", [110.0, 30.0], Pos2::new(10.0,310.0)).clicked(){
             if audio_player.path.is_none(){
                 println!("Please load a song before continuing")
             }else {self.chops.push(Chop::new());}
-
         }
 
-        new_btn(ui,"Color: ", [140.0, 30.0], Pos2::new(10.0,345.0)); //just display for now
+        new_btn(ui,"Color: ", [110.0, 30.0], Pos2::new(10.0,345.0)); //just display for now
+        if new_img_btn(ui, include_image!("../imgs/play.svg"), [40.0,40.0], Pos2::new(125.0, 310.0 + 15.0)).clicked(){
+            match &self.sink{
+                Some(s) => {s.play()}
+                None=>{ self.startup(&audio_player) }//startup
+            }
+        };
+
         let chop_timeline = Rect::from_two_pos(egui::pos2(175.0, 310.0), egui::pos2(650.0 + 175.0, 375.0));
         ui.painter().rect_filled(chop_timeline, 25, Color32::DARK_GRAY);
         let resp = ui.allocate_rect(chop_timeline, Sense::click_and_drag());
-        
 
         if resp.drag_started(){
             for (index, chop) in self.chops.iter_mut().enumerate()  {
@@ -174,9 +210,8 @@ impl ChopEditor{
                     println!("Start pos is {}. Dragging {}", chop.drag_start, index);
                 }
             }
-        }
-
-
+        } //handle chop movement
+        
         if resp.dragged(){
             if let Some(i) = self.selected_index {
                 let chops = &mut self.chops;
@@ -184,8 +219,7 @@ impl ChopEditor{
                 specific_chop.offset = (resp.interact_pointer_pos().unwrap().x - specific_chop.drag_start).abs();
             }
         }
-
-
+        
         if resp.clicked(){ //clicked anywhere on the screen
             let mut focused = false;
             for (index,chop) in self.chops.iter().enumerate()  {
@@ -205,7 +239,7 @@ impl ChopEditor{
             }
         }
 
-        for chop in &mut self.chops{
+        for chop in &mut self.chops{ //render each chop
             chop.render(ui, chop_timeline);
         }
 

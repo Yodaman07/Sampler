@@ -550,6 +550,7 @@ dependencies = [
  "plotters",
  "plotters-bitmap",
  "png",
+ "random_color",
  "ringbuffer",
 ]
 
