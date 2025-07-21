@@ -3,7 +3,7 @@ use crate::chop_editor::ChopEditor;
 use crate::file_loader::FileLoader;
 use eframe::emath::Vec2;
 use egui::{Color32, Rect, Response, Theme, Ui, Widget};
-use rodio::OutputStreamHandle;
+use rodio::{OutputStream};
 use tokio::runtime;
 
 pub struct SamplerApp{
@@ -14,7 +14,7 @@ pub struct SamplerApp{
 
 
 //Default boilerplate stuff from https://github.com/emilk/egui/blob/main/examples/hello_world/src/main.rs
-pub fn init_app(stream_handle: OutputStreamHandle) -> eframe::Result{
+pub fn init_app(stream_handle: OutputStream) -> eframe::Result{
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([850.0, 400.0]),
         ..Default::default()
@@ -59,7 +59,7 @@ impl eframe::App for SamplerApp {
 }
 
 impl SamplerApp{
-    fn new( stream_handle: OutputStreamHandle) -> Self {
+    fn new( stream_handle: OutputStream) -> Self {
         Self{
             file_loader: FileLoader::new(),
             audio_player: AudioPlayer::new(stream_handle, runtime::Builder::new_multi_thread()

@@ -2,7 +2,7 @@ use crate::audio_player::{AudioPlayer, AudioPlayerState, PLAYER_LEFT_OFFSET};
 use eframe::epaint::{Color32, FontFamily, FontId, StrokeKind};
 use egui::{include_image, ImageSource, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
 use random_color::RandomColor;
-use rodio::{OutputStream, OutputStreamHandle, Sink};
+use rodio::{OutputStream, OutputStreamBuilder, Sink};
 use symphonia::core::conv::IntoSample;
 use crate::Song;
 
@@ -124,9 +124,9 @@ impl ChopEditor{
     fn startup(&mut self, audio_player: &AudioPlayer){
 
         if !self.chops.is_empty() {
-            let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+            let stream_handle = OutputStreamBuilder::open_default_stream().expect("Unable to open the output stream");
 
-            let sink = Sink::try_new(&stream_handle).expect("Couldn't make sink");
+            let sink = Sink::connect_new(&stream_handle.mixer());
             let s: Song = Song { path: String::from(audio_player.path.as_ref().unwrap()) }; //base song can make modifications via clips
 
             for chop in &self.chops {

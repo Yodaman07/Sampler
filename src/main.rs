@@ -4,7 +4,7 @@ mod file_loader;
 mod chop_editor;
 
 use regex::Regex;
-use rodio::{source::Source, Decoder, OutputStream};
+use rodio::{source::Source, Decoder, OutputStream, OutputStreamBuilder};
 use std::fs::File;
 use std::io::BufReader;
 use std::time::Duration;
@@ -21,7 +21,7 @@ impl Song {
         Decoder::new(file).expect("Couldn't decode")
     }
 
-    fn clip(&self, speed: f32, start_time: f32, end_time: f32, loop_track: bool) -> impl Source<Item = i16> + Send{ //cleaned up return statement with claude
+    fn clip(&self, speed: f32, start_time: f32, end_time: f32, loop_track: bool) -> impl Source<Item = f32> + Send{ //cleaned up return statement with claude
         self.new()
             .speed(speed)
             .skip_duration(Duration::from_secs_f32(start_time))
@@ -34,7 +34,8 @@ impl Song {
 
     fn get_samples(&self) -> Vec<i16> { //ai help
         let decoder = self.new();
-        decoder.collect()
+
+        decoder.map(|x: f32| (x * i16::MAX as f32) as i16).collect() //ai help <-- not sure how safe this is
     }
 
     fn get_name(&self) -> String{
@@ -49,7 +50,7 @@ impl Song {
 }
 
 fn main() {
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    let stream_handle = OutputStreamBuilder::open_default_stream().expect("Error getting the default stream");
 
     //file path relative to Cargo.toml
     // let video_title = download_file("https://youtu.be/YWXvj_fb1Ec?si=Y8jAqiHDAb3z3J9f");

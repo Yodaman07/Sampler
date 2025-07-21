@@ -3,7 +3,7 @@ use audio_visualizer::waveform::png_file::waveform_static_png_visualize;
 use audio_visualizer::Channels;
 use eframe::epaint::Color32;
 use egui::{include_image, Image, Rect, Ui};
-use rodio::{OutputStreamHandle, Sink};
+use rodio::{OutputStream, Sink};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -21,7 +21,7 @@ pub struct AudioPlayer{ //audio player includes the waveform, the pause/play btn
     pub path: Option<String>,  //representing if a song file has been loaded or not yet
     pub current_time: f32,
     pub playback_time: f32, //total time
-    stream_handle: OutputStreamHandle,
+    stream_handle: OutputStream,
     pub(crate) sink: Option<Sink>,
     pub audio_player_state: AudioPlayerState,
     thread2: runtime::Runtime,
@@ -34,7 +34,7 @@ pub enum AudioPlayerState{
 }
 
 impl AudioPlayer{
-    pub fn new(handle: OutputStreamHandle, thread2: runtime::Runtime) -> Self{
+    pub fn new(handle: OutputStream, thread2: runtime::Runtime) -> Self{
         Self{
             path: None, //This is the default path of the music player. By default, it won't play because it's waiting to load a file
             current_time: 0.0,
@@ -50,7 +50,8 @@ impl AudioPlayer{
 
     pub fn startup(&mut self){ //load sink and song when you load it via file loader (yt or local), also generate the waveform image
         if let Some(path) = &self.path{
-            let sink = Sink::try_new(&self.stream_handle).expect("Couldn't make sink");
+            
+            let sink = Sink::connect_new(&self.stream_handle.mixer());
             let s: Song = Song{ path: String::from(path)}; //base song can make modifications via clips
 
             self.playback_time = s.original_duration().as_secs_f32(); //not good at downloading really short videos
@@ -71,6 +72,7 @@ impl AudioPlayer{
 
                 let loaded = Arc::clone(&self.image_loaded); //cloning arc
                 self.thread2.spawn(async move { //move means it will take ownership of variables
+                    
                     waveform_static_png_visualize(
                         &s.get_samples(),
                         Channels::Mono,
