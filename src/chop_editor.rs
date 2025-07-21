@@ -3,7 +3,6 @@ use eframe::epaint::{Color32, FontFamily, FontId, StrokeKind};
 use egui::{include_image, ImageSource, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
 use random_color::RandomColor;
 use rodio::{OutputStream, OutputStreamBuilder, Sink};
-use symphonia::core::conv::IntoSample;
 use crate::Song;
 
 
@@ -124,9 +123,7 @@ impl ChopEditor{
     fn startup(&mut self, audio_player: &AudioPlayer){
 
         if !self.chops.is_empty() {
-            let stream_handle = OutputStreamBuilder::open_default_stream().expect("Unable to open the output stream");
-
-            let sink = Sink::connect_new(&stream_handle.mixer());
+            let sink = Sink::connect_new(&audio_player.stream_handle.mixer());
             let s: Song = Song { path: String::from(audio_player.path.as_ref().unwrap()) }; //base song can make modifications via clips
 
             for chop in &self.chops {
@@ -134,9 +131,12 @@ impl ChopEditor{
                     let chop = s.clip(1.0, chop.start.as_ref().unwrap().time, chop.end.as_ref().unwrap().time, false); //actual chop
                     //Sink is what is actually playing the music
                     sink.append(chop);
+                    sink.pause();
+
+
                 }
             }
-            sink.pause();
+            self.state = AudioPlayerState::PAUSED;
             self.sink = Some(sink);
         }else { println!("There are no chops to play") }
 
@@ -191,8 +191,19 @@ impl ChopEditor{
         new_btn(ui,"Color: ", [110.0, 30.0], Pos2::new(10.0,345.0)); //just display for now
         if new_img_btn(ui, include_image!("../imgs/play.svg"), [40.0,40.0], Pos2::new(125.0, 310.0 + 15.0)).clicked(){
             match &self.sink{
-                Some(s) => {s.play()}
-                None=>{ self.startup(&audio_player) }//startup
+                Some(s) => {
+                    match &self.state{
+                        AudioPlayerState::PAUSED => {
+                            s.play();
+                            self.state = AudioPlayerState::PLAYING;
+                        }
+                        AudioPlayerState::PLAYING => {
+                            s.pause();
+                            self.state = AudioPlayerState::PAUSED;
+                        }
+                    };
+                }
+                None=>{ self.startup(&audio_player); }//startup
             }
         };
 

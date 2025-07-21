@@ -21,7 +21,7 @@ pub struct AudioPlayer{ //audio player includes the waveform, the pause/play btn
     pub path: Option<String>,  //representing if a song file has been loaded or not yet
     pub current_time: f32,
     pub playback_time: f32, //total time
-    stream_handle: OutputStream,
+    pub stream_handle: OutputStream,
     pub(crate) sink: Option<Sink>,
     pub audio_player_state: AudioPlayerState,
     thread2: runtime::Runtime,
@@ -50,7 +50,7 @@ impl AudioPlayer{
 
     pub fn startup(&mut self){ //load sink and song when you load it via file loader (yt or local), also generate the waveform image
         if let Some(path) = &self.path{
-            
+
             let sink = Sink::connect_new(&self.stream_handle.mixer());
             let s: Song = Song{ path: String::from(path)}; //base song can make modifications via clips
 
@@ -72,7 +72,7 @@ impl AudioPlayer{
 
                 let loaded = Arc::clone(&self.image_loaded); //cloning arc
                 self.thread2.spawn(async move { //move means it will take ownership of variables
-                    
+
                     waveform_static_png_visualize(
                         &s.get_samples(),
                         Channels::Mono,

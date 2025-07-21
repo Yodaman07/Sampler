@@ -17,8 +17,7 @@ pub struct Song{ path: String }
 impl Song {
     fn new(&self) -> Decoder<BufReader<File>> { //opens and decodes song
         let file = File::open(&self.path).expect("Couldn't open file");
-        let file = BufReader::new(file);
-        Decoder::new(file).expect("Couldn't decode")
+        Decoder::try_from(file).expect("Couldn't decode")
     }
 
     fn clip(&self, speed: f32, start_time: f32, end_time: f32, loop_track: bool) -> impl Source<Item = f32> + Send{ //cleaned up return statement with claude
@@ -34,7 +33,6 @@ impl Song {
 
     fn get_samples(&self) -> Vec<i16> { //ai help
         let decoder = self.new();
-
         decoder.map(|x: f32| (x * i16::MAX as f32) as i16).collect() //ai help <-- not sure how safe this is
     }
 
