@@ -98,7 +98,7 @@ impl AudioPlayer{
         }else{ println!("Unable to skip content. Try loading audio first"); }
         self.current_time = time;
     }
-    fn get_player_icon(&self) -> Image{
+    fn get_player_icon(&self) -> Image<'_>{
         match self.audio_player_state{
             AudioPlayerState::PAUSED => { Image::from(include_image!("../imgs/play.svg")) } //optimize with lifetimes later
             AudioPlayerState::PLAYING => { Image::from(include_image!("../imgs/pause.svg")) }

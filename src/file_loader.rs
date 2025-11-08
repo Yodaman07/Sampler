@@ -44,7 +44,7 @@ impl FileLoader{
         println!("Downloaded {}", title);
         Some(title)
     }
-    pub fn construct(&mut self, audio_player: &mut AudioPlayer, ui: &mut Ui){
+    pub fn construct(&mut self,  ui: &mut Ui, audio_player: &mut AudioPlayer){
 
         let p_x = 8.0; //panel x and panel y
         let p_y = 109.0;

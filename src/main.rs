@@ -4,7 +4,7 @@ mod file_loader;
 mod chop_editor;
 
 use regex::Regex;
-use rodio::{source::Source, Decoder, OutputStream, OutputStreamBuilder};
+use rodio::{source::Source, Decoder, OutputStreamBuilder};
 use std::fs::File;
 use std::io::BufReader;
 use std::time::Duration;

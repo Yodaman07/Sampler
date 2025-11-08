@@ -35,9 +35,9 @@ pub fn init_app(stream_handle: OutputStream) -> eframe::Result{
 impl eframe::App for SamplerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.request_repaint(); // This forces egui to update continuously
-        if matches!(self.audio_player.audio_player_state, AudioPlayerState::PLAYING) { //AI help
-            
-        }
+        // if matches!(self.audio_player.audio_player_state, AudioPlayerState::PLAYING) { //AI help
+        //     
+        // }
 
         ctx.style_mut(|style| {
             style.visuals.selection.bg_fill = Color32::from_rgb(131, 173, 138);
@@ -50,7 +50,7 @@ impl eframe::App for SamplerApp {
                 
                 self.audio_player.construct(ui); // AI help, but it is a compact way to display the audio player
                 ui.add_space(10.0);
-                self.file_loader.construct(&mut self.audio_player, ui);
+                self.file_loader.construct(ui, &mut self.audio_player);
                 ui.add_space(20.0);
                 self.chop_editor.construct(ui, &mut self.audio_player);
         });

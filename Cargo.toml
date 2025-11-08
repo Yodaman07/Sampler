@@ -7,9 +7,12 @@ edition = "2021"
 audio-visualizer = {path = "audio-visualizer"}
 eframe = "0.31.1"
 egui = "0.31.1"
-egui_extras = { version = "*", features = ["all_loaders"] }
+egui_extras = { version = "0.31.1", features = ["all_loaders"] }
 regex = "1.11.1"
 rfd = "0.15.3"
+
+# Force a patched winit version to avoid macOS objc2 panic
+winit = "0.30.12"
 
 rodio = "0.21.1"
 symphonia = "0.5.4"
