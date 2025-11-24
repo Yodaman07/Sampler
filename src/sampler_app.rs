@@ -24,8 +24,6 @@ pub fn init_app(stream_handle: OutputStream) -> eframe::Result{
         options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
-
-
             cc.egui_ctx.set_theme(Theme::Dark); //Keeps app in dark mode
             Ok(Box::new(SamplerApp::new(stream_handle)))
         } ),
@@ -47,7 +45,7 @@ impl eframe::App for SamplerApp {
         egui::CentralPanel::default()
             .show(ctx, |ui| {
                 //App content goes here
-                
+
                 self.audio_player.construct(ui); // AI help, but it is a compact way to display the audio player
                 ui.add_space(10.0);
                 self.file_loader.construct(ui, &mut self.audio_player);

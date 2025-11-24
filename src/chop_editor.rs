@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::audio_player::{AudioPlayer, AudioPlayerState, PLAYER_LEFT_OFFSET};
 use eframe::epaint::{Color32, FontFamily, FontId, StrokeKind};
 use egui::{include_image, ImageSource, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
@@ -56,7 +57,7 @@ impl Chop{
         }
     }
 
-    fn render(&mut self, ui: &mut Ui, surface: Rect){ //surface is the editor
+    fn render(&mut self, ui: &mut Ui, surface: Rect){ //surface is the timeline that the chop is placed on
         let mut pos: Pos2 = surface.min;
         pos.x += self.offset;
 
@@ -73,13 +74,13 @@ impl Chop{
         ui.painter().rect(r, 13, fill, Stroke::new(4.0, stroke), StrokeKind::Inside);
     }
 
-    fn is_valid(&self) -> bool{ self.start.is_some() && self.end.is_some() }
+    fn is_valid(&self) -> bool{ self.start.is_some() && self.end.is_some() } //verifying that the chop has a start & end marker
 }
 impl Marker{
     fn new(col: Color32, time: f32)-> Self {
         Self{ col, time }
     }
-    fn draw(&self, ui: &mut Ui, audio_player: &AudioPlayer){
+    fn render(&self, ui: &mut Ui, audio_player: &AudioPlayer){ //renders marker on original timeline
         let pos = audio_player.get_pos_from_time(Some(self.time));
         ui.painter().rect_filled(Rect::from_two_pos(egui::pos2(PLAYER_LEFT_OFFSET + pos, 10.0), egui::pos2(PLAYER_LEFT_OFFSET + 4.0 + pos, 75.0)), 10, self.col); //height is 65.0
     }
@@ -100,6 +101,7 @@ fn new_img_btn(ui: &mut Ui, img: ImageSource, size: impl Into<Vec2>, pos: Pos2) 
 impl ChopEditor{
 
     fn player_mixin(&mut self, audio_player: &mut AudioPlayer){ //"mixin" code that will control the audio player --> referred to as a mixin bc of minecraft modding (i think its a java thing)
+        //if you have a chop selected, and you want to play the original track, this mixin will skip around as the original track plays to only be the chop
 
         let current_time = audio_player.current_time;
         if let Some(i) = self.selected_index {
@@ -110,6 +112,11 @@ impl ChopEditor{
             if chop.is_valid() {
                 match &audio_player.audio_player_state {
                     AudioPlayerState::PLAYING => {
+
+                        // let sink = audio_player.sink.as_ref();
+
+                        // sink.unwrap().set_speed(chop.speed);
+
                         if current_time >= end.unwrap().time {
                             audio_player.skip_to(start.unwrap().time);
                         }
@@ -120,7 +127,7 @@ impl ChopEditor{
         }
     }
 
-    fn startup(&mut self, audio_player: &AudioPlayer){
+    fn startup(&mut self, audio_player: &AudioPlayer){ //compiling once you "play" the track
 
         if !self.chops.is_empty() {
             let sink = Sink::connect_new(&audio_player.stream_handle.mixer());
@@ -203,9 +210,22 @@ impl ChopEditor{
                         }
                     };
                 }
-                None=>{ self.startup(&audio_player); }//startup
+                None=>{ self.startup(&audio_player); }//compile everything
             }
         };
+
+        if new_btn(ui, "Pitch", [100.0, 10.0], Pos2::new(650.0, 200.0)).clicked(){
+            let ap: &mut AudioPlayer = audio_player;
+            if ap.speed_pitch == 1.0 {
+                ap.speed_pitch = 2.0;
+            }else{
+                ap.speed_pitch = 1.0;
+            }
+
+            if let Some(i) = self.selected_index{
+                let chop: &mut Chop = &mut self.chops[i];
+            }
+        }
 
         let chop_timeline = Rect::from_two_pos(egui::pos2(175.0, 310.0), egui::pos2(650.0 + 175.0, 375.0));
         ui.painter().rect_filled(chop_timeline, 25, Color32::DARK_GRAY);
@@ -259,8 +279,8 @@ impl ChopEditor{
 
             ui.painter().rect_filled(Rect::from_min_size(Pos2::new(0.0,0.0), Vec2::new(850.0, 400.0)), 0, self.tint_col);
 
-            if let Some(c) = &chop.start {c.draw(ui, &audio_player);} //renders the markers if they exist
-            if let Some(c) = &chop.end {c.draw(ui, &audio_player);}
+            if let Some(c) = &chop.start {c.render(ui, &audio_player);} //renders the markers if they exist
+            if let Some(c) = &chop.end {c.render(ui, &audio_player);}
         }
     }
 }

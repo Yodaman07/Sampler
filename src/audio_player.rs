@@ -20,7 +20,13 @@ pub(crate) const PLAYER_LEFT_OFFSET: f32 = 100.0; //the audio player starts 100 
 pub struct AudioPlayer{ //audio player includes the waveform, the pause/play btn, and the time indicator
     pub path: Option<String>,  //representing if a song file has been loaded or not yet
     pub current_time: f32,
-    pub playback_time: f32, //total time
+    last_current_time: f32, //current time up to the pitch shift
+    last_current_time_unscaled: f32,
+    new_chunk: f32,
+    vector: Vec<f32>,
+    vector2: Vec<f32>,
+    pub playback_time: f32, //total time for base audio
+    pub speed_pitch: f32, //Normally 1.0, faster speed, higher speed, this is to allow for smooth modifications in the chop editor
     pub stream_handle: OutputStream,
     pub(crate) sink: Option<Sink>,
     pub audio_player_state: AudioPlayerState,
@@ -38,7 +44,13 @@ impl AudioPlayer{
         Self{
             path: None, //This is the default path of the music player. By default, it won't play because it's waiting to load a file
             current_time: 0.0,
+            last_current_time: 0.0,
+            last_current_time_unscaled: 0.0,
+            new_chunk: 0.0,
+            vector: vec![],
+            vector2: vec![],
             playback_time: 0.0, //total length of track
+            speed_pitch: 1.0,
             stream_handle: handle,
             sink: None,
             audio_player_state: AudioPlayerState::PAUSED,
@@ -106,15 +118,16 @@ impl AudioPlayer{
     }
     pub fn get_pos_from_time(&self, time: Option<f32>) -> f32{ //650 pixel long play area
         let window_space = 650.0;
-        if let Some(t) = time{ (window_space/self.playback_time) * t }
-        else {(window_space/self.playback_time) * self.current_time}
+        if let Some(t) = time{
+            (window_space/(self.playback_time)) * t
+        } else {
+            (window_space/self.playback_time) * self.current_time
+        }
     }
     fn get_time_from_pos(&self, pos: f32) -> f32{
         let window_space = 650.0;
-
         if pos < 0.0 {return 0.0} //prevent incorrect negative values
-
-        (pos/window_space) * self.playback_time
+        (pos/window_space) * (self.playback_time/self.speed_pitch)
     }
 
     fn paint_waveform(&self, ui: &mut Ui, target: Rect){
@@ -142,16 +155,39 @@ impl AudioPlayer{
         }
     }
     pub fn construct(&mut self, ui: &mut Ui){
-        if let Some(s) = &self.sink { //handles the auto pause at the end of the track, may be buggy
-            self.current_time = s.get_pos().as_secs_f32();
+        if let Some(s) = &self.sink { //handles the auto pause at the end of the track, may be buggy TODO
+            if self.speed_pitch != s.speed(){ //switching speeds/pitches
 
+                self.vector.push((self.current_time-self.last_current_time)*s.speed());
+                self.vector2.push((self.current_time-self.last_current_time));
+                // self.last_current_time = self.current_time; //expanded to actual time in seconds
+                // self.last_current_time_unscaled = self.current_time/s.speed(); //unscaled as if there was no speed modifier
+                // self.new_chunk = 0.0;
+
+                s.set_speed(self.speed_pitch); // a pitch switch has taken place
+            }
+
+            let pos: f32= s.get_pos().as_secs_f32(); //pos is everything scaled by 1, you need to find the sections of it that are sped up and add them together appropriately scaled
+            // let new_time_chunk = ((pos-self.last_current_time_unscaled)*self.speed_pitch);
+            // println!("{}, {}, {}, {}, {}", new_time_chunk, pos, self.last_current_time_unscaled, self.last_current_time,self.speed_pitch);
+            println!("{:?}, {}", self.vector, self.speed_pitch);
+            // self.new_chunk =
+            let sum : f32 = self.vector.iter().sum();
+            let sum2 : f32 = self.vector2.iter().sum();
+
+            self.current_time = (pos-sum2)*self.speed_pitch + sum;
+            println!("{}", sum);
+            // self.current_time = self.last_current_time + new_time_chunk; //comparing the two unscaled, then scaling, then add to the scaled last_current_time
+
+            //ex: total pos is 17, 10 were at a speed_pitch of 1, 7 were at a speed_pitch of 2, so instead of being 17 along you are 24 along
+
+            println!("{}", self.current_time);
             if self.current_time >= self.playback_time{
                 println!("End of song");
                 s.pause();
                 self.audio_player_state = AudioPlayerState::PAUSED; //will auto pause the song at the end
             }
         }
-
 
         ui.horizontal(|ui| {
 
@@ -206,8 +242,6 @@ impl AudioPlayer{
             let time = self.sink.as_ref().unwrap().get_pos();
             println!("Current Time {:?}", time); //This is the time since the clip started. Need to account for starting delay and any speed changes
         }
-
-
 
     }
 }
