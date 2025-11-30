@@ -25,6 +25,7 @@ impl Song {
             .speed(speed)
             .skip_duration(Duration::from_secs_f32(start_time))
             .take_duration(Duration::from_secs_f32(end_time - start_time))
+
     }
 
     fn original_duration(&self) -> Duration{ //returns the original song length (before clipping)
@@ -37,7 +38,7 @@ impl Song {
     }
 
     fn get_name(&self) -> String{
-        let re = Regex::new("([^/]+)(.mp3)").unwrap(); //regex should be good on all file names, as long as they have no / character
+        let re = Regex::new("([^/]+)(.mp3)").unwrap(); //regex should be good on all file names, as long as they have no / character TODO make sure no / chars
         let Some(captured) = re.captures(&self.path) else {
             println!("Unable to find name");
             return String::from("");

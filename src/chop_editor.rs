@@ -49,7 +49,7 @@ impl Chop{
             offset: 0.0,
             drag_start: 0.0,
 
-            speed: 0.0,
+            speed: 1.0,
             pitch: 0.0,
             volume: 0.0,
             fade_in: false,
@@ -86,13 +86,25 @@ impl Marker{
     }
 }
 
-fn new_btn(ui: &mut Ui, name: impl Into<String>, padding: impl Into<Vec2>, pos: Pos2) -> Response{
-    let font = FontId::new(14.0, FontFamily::default());
+fn new_btn(ui: &mut Ui, name: impl Into<String>, padding: impl Into<Vec2>, pos: Pos2, font_size: f32) -> Response{
+    let font = FontId::new(font_size, FontFamily::default()); //default size is 14
     let button = egui::Button::new(egui::RichText::new(name).font(font).strong())
         .corner_radius(13)
         .fill(Color32::from_rgb(60,60,60));
     //max size is like padding
     ui.put(Rect::from_min_size(pos, padding.into()), button)
+}
+
+fn new_label(ui: &mut Ui, name: impl Into<String>, padding: impl Into<Vec2>, pos: Pos2, font_size: f32){
+    let font = FontId::new(font_size, FontFamily::default()); //default size is 14
+
+    let button = egui::Button::new(egui::RichText::new(name).font(font).strong())
+        .corner_radius(13)
+        .sense(Sense::empty())
+        .fill(Color32::from_rgb(60,60,60));
+    //max size is like padding
+
+    ui.put(Rect::from_min_size(pos, padding.into()), button);
 }
 
 fn new_img_btn(ui: &mut Ui, img: ImageSource, size: impl Into<Vec2>, pos: Pos2) -> Response{
@@ -109,13 +121,12 @@ impl ChopEditor{
 
             let start = chop.start.as_ref();
             let end = chop.end.as_ref();
-            if chop.is_valid() {
+            if chop.is_valid() { //asserts that end and start is some
                 match &audio_player.audio_player_state {
                     AudioPlayerState::PLAYING => {
+                        let a : &mut AudioPlayer = audio_player;
+                        audio_player.speed_pitch = chop.speed;
 
-                        // let sink = audio_player.sink.as_ref();
-
-                        // sink.unwrap().set_speed(chop.speed);
 
                         if current_time >= end.unwrap().time {
                             audio_player.skip_to(start.unwrap().time);
@@ -155,12 +166,12 @@ impl ChopEditor{
         ui.horizontal(|ui|{ //top menu part
             ui.add_space(300.0);
 
-            let start_btn = new_btn(ui,"Place Start Marker", [140.0, 30.0], Pos2::new(210.0, 110.0));
+            let start_btn = new_btn(ui,"Place Start Marker", [140.0, 30.0], Pos2::new(210.0, 110.0), 14.0);
 
             let left = new_img_btn(ui, include_image!("../imgs/left_arrow.svg"), [32.0,32.0], Pos2::new(210.0+20.0, 150.0));
             let right = new_img_btn(ui, include_image!("../imgs/right_arrow.svg"), [32.0,32.0], Pos2::new(318.0-20.0, 150.0));
 
-            let end_btn = new_btn(ui,"Place End Marker", [140.0, 30.0], Pos2::new(210.0, 190.0));
+            let end_btn = new_btn(ui,"Place End Marker", [140.0, 30.0], Pos2::new(210.0, 190.0), 14.0);
 
 
             if let Some(sink) = audio_player.sink.as_ref() {
@@ -189,13 +200,13 @@ impl ChopEditor{
         });
 
         // ui.add_space(100.0);
-        if new_btn(ui,"New Chop", [110.0, 30.0], Pos2::new(10.0,310.0)).clicked(){
+        if new_btn(ui,"New Chop", [110.0, 30.0], Pos2::new(10.0,310.0), 14.0).clicked(){
             if audio_player.path.is_none(){
                 println!("Please load a song before continuing")
             }else {self.chops.push(Chop::new());}
         }
 
-        new_btn(ui,"Color: ", [110.0, 30.0], Pos2::new(10.0,345.0)); //just display for now
+        new_btn(ui,"Color: ", [110.0, 30.0], Pos2::new(10.0,345.0), 14.0); //just display for now
         if new_img_btn(ui, include_image!("../imgs/play.svg"), [40.0,40.0], Pos2::new(125.0, 310.0 + 15.0)).clicked(){
             match &self.sink{
                 Some(s) => {
@@ -214,18 +225,25 @@ impl ChopEditor{
             }
         };
 
-        if new_btn(ui, "Pitch", [100.0, 10.0], Pos2::new(650.0, 200.0)).clicked(){
-            let ap: &mut AudioPlayer = audio_player;
-            if ap.speed_pitch == 1.0 {
-                ap.speed_pitch = 2.0;
-            }else{
-                ap.speed_pitch = 1.0;
-            }
+        if new_btn(ui, "-", [20.0, 20.0], Pos2::new(640.0, 200.0), 20.0).clicked(){
 
-            if let Some(i) = self.selected_index{
-                let chop: &mut Chop = &mut self.chops[i];
-            }
         }
+        new_label(ui, "Pitch", [100.0, 20.0], Pos2::new(640.0, 220.0), 20.0);
+        if new_btn(ui, "+", [20.0, 20.0], Pos2::new(700.0, 200.0), 20.0).clicked(){
+
+        }
+        // if new_btn(ui, "Pitch", [100.0, 10.0], Pos2::new(650.0, 200.0)).clicked(){
+        //
+        //     if let Some(i) = self.selected_index{
+        //         let chop: &mut Chop = &mut self.chops[i];
+        //         if chop.speed == 1.0 {
+        //             chop.speed = 2.0;
+        //         }else{
+        //             chop.speed = 1.0;
+        //         }
+        //     }
+        // }
+
 
         let chop_timeline = Rect::from_two_pos(egui::pos2(175.0, 310.0), egui::pos2(650.0 + 175.0, 375.0));
         ui.painter().rect_filled(chop_timeline, 25, Color32::DARK_GRAY);
