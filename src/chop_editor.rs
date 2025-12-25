@@ -95,17 +95,17 @@ fn new_btn(ui: &mut Ui, name: impl Into<String>, padding: impl Into<Vec2>, pos: 
     ui.put(Rect::from_min_size(pos, padding.into()), button)
 }
 
-fn new_label(ui: &mut Ui, name: impl Into<String>, padding: impl Into<Vec2>, pos: Pos2, font_size: f32){
+fn new_label(ui: &mut Ui, name: impl Into<String>, padding: impl Into<Vec2>, pos: Pos2, font_size: f32, bg_col: Color32){
     let font = FontId::new(font_size, FontFamily::default()); //default size is 14
 
     let button = egui::Button::new(egui::RichText::new(name).font(font).strong())
         .corner_radius(13)
         .sense(Sense::empty())
-        .fill(Color32::from_rgb(60,60,60));
+        .fill(bg_col);
     //max size is like padding
 
     ui.put(Rect::from_min_size(pos, padding.into()), button);
-}
+} //basically a btn
 
 fn new_img_btn(ui: &mut Ui, img: ImageSource, size: impl Into<Vec2>, pos: Pos2) -> Response{
     ui.put(Rect::from_min_size(pos, size.into()), egui::Button::image(img).corner_radius(13))
@@ -125,8 +125,8 @@ impl ChopEditor{
                 match &audio_player.audio_player_state {
                     AudioPlayerState::PLAYING => {
                         let a : &mut AudioPlayer = audio_player;
+                        // println!("{}, {}", audio_player.speed_pitch, chop.speed);
                         audio_player.speed_pitch = chop.speed;
-
 
                         if current_time >= end.unwrap().time {
                             audio_player.skip_to(start.unwrap().time);
@@ -225,24 +225,25 @@ impl ChopEditor{
             }
         };
 
-        if new_btn(ui, "-", [20.0, 20.0], Pos2::new(640.0, 200.0), 20.0).clicked(){
-
+        if new_btn(ui, "-", [20.0, 20.0], Pos2::new(615.0, 220.0), 20.0).clicked(){
+            if let Some(i) = self.selected_index{
+                let chop: &mut Chop = &mut self.chops[i];
+                chop.speed-=0.1;
+            }
         }
-        new_label(ui, "Pitch", [100.0, 20.0], Pos2::new(640.0, 220.0), 20.0);
-        if new_btn(ui, "+", [20.0, 20.0], Pos2::new(700.0, 200.0), 20.0).clicked(){
-
+        new_label(ui, "Pitch", [100.0, 20.0], Pos2::new(640.0, 220.0), 20.0, Color32::from_rgb(60,60,60));
+        if new_btn(ui, "+", [20.0, 20.0], Pos2::new(745.0, 220.0), 20.0).clicked(){
+            if let Some(i) = self.selected_index{
+                let chop: &mut Chop = &mut self.chops[i];
+                chop.speed+=0.1;
+            }
         }
-        // if new_btn(ui, "Pitch", [100.0, 10.0], Pos2::new(650.0, 200.0)).clicked(){
-        //
-        //     if let Some(i) = self.selected_index{
-        //         let chop: &mut Chop = &mut self.chops[i];
-        //         if chop.speed == 1.0 {
-        //             chop.speed = 2.0;
-        //         }else{
-        //             chop.speed = 1.0;
-        //         }
-        //     }
-        // }
+        if let Some(i) = self.selected_index{
+            let chop: &mut Chop = &mut self.chops[i];
+            let speed = (((chop.speed*10.0).round())/10.0).to_string();
+            new_label(ui, speed, [50.0, 20.0], Pos2::new(665.0, 245.0), 15.0, Color32::from_rgb(35,35,35));
+        }else { new_label(ui, "NA", [50.0, 20.0], Pos2::new(665.0, 255.0), 15.0, Color32::from_rgb(35,35,35)); }
+
 
 
         let chop_timeline = Rect::from_two_pos(egui::pos2(175.0, 310.0), egui::pos2(650.0 + 175.0, 375.0));
